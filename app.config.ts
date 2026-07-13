@@ -47,6 +47,13 @@ const config: ExpoConfig = {
       },
     ],
     'expo-secure-store',
+    [
+      'react-native-health',
+      {
+        healthSharePermission:
+          'La app lee tus entrenamientos de pádel del Apple Watch (duración, pulso y calorías) para vincularlos a cada partido.',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

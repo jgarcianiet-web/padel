@@ -47,7 +47,7 @@ eas build --profile development --platform ios
 ```
 
 - La primera build te pedirá **iniciar sesión con tu Apple ID**: EAS crea por
-  ti el certificado, el bundle ID `com.jgarcianiet.ligapadel` y el perfil de
+  ti el certificado, el bundle ID `com.jesus.ligapadel` y el perfil de
   aprovisionamiento, y **sincroniza la capability de HealthKit** en el App ID.
 - Al acabar (~15 min) te da un enlace: ábrelo en el iPhone e instala.
 - Arranca el servidor de desarrollo en tu ordenador con
@@ -76,7 +76,7 @@ eas submit --platform ios --latest
   - Genera la contraseña en https://account.apple.com → *Inicio de sesión y
     seguridad* → *Contraseñas específicas de apps*.
 - Si la app aún no existe en App Store Connect, EAS te ofrece **crearla**
-  (nombre: Liga Personal Pádel, bundle ID `com.jgarcianiet.ligapadel`).
+  (nombre: Liga Personal Pádel, bundle ID `com.jesus.ligapadel`).
   Acepta.
 - La subida tarda unos minutos y luego Apple la procesa (10-30 min más).
 

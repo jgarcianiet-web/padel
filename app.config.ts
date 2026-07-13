@@ -15,7 +15,7 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'light',
   ios: {
     supportsTablet: false,
-    bundleIdentifier: 'com.jgarcianiet.ligapadel',
+    bundleIdentifier: 'com.jesus.ligapadel',
     infoPlist: {
       NSCameraUsageDescription:
         'La app usa la cámara para fotografiar la pantalla de resultados de Padel Band y rellenar tus golpes automáticamente.',
@@ -27,7 +27,7 @@ const config: ExpoConfig = {
     },
   },
   android: {
-    package: 'com.jgarcianiet.ligapadel',
+    package: 'com.jesus.ligapadel',
     adaptiveIcon: {
       backgroundColor: '#1E56A8',
       foregroundImage: './assets/images/android-icon-foreground.png',

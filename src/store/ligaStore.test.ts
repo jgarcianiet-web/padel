@@ -34,13 +34,33 @@ describe('ligaStore', () => {
     expect(s.matches).toHaveLength(1);
     expect(s.perfil.nivelPlaytomic).toBe('3.20');
     expect(s.analisis?.nPartidos).toBe(3);
+    // datos sin historial (web-app o versión anterior): se siembra con el último
+    expect(s.analisisHistorial).toEqual([BACKUP_BRIEF.analisis]);
+  });
+
+  test('guardarAnalisis archiva cada análisis en el historial', async () => {
+    await useLigaStore.getState().hydrate();
+    const a1 = { ...BACKUP_BRIEF.analisis!, fecha: '2026-07-01', nPartidos: 3 };
+    const a2 = { ...BACKUP_BRIEF.analisis!, fecha: '2026-07-10', nPartidos: 5 };
+    await useLigaStore.getState().guardarAnalisis(a1);
+    await useLigaStore.getState().guardarAnalisis(a2);
+    const s = useLigaStore.getState();
+    expect(s.analisis).toEqual(a2);
+    expect(s.analisisHistorial).toEqual([a1, a2]);
+    expect((await leerDisco()).analisisHistorial).toHaveLength(2);
   });
 
   test('guardarPartido persiste el shape exacto en disco', async () => {
     await useLigaStore.getState().hydrate();
     await useLigaStore.getState().guardarPartido(mkMatch({ id: 1 }));
     const disco = await leerDisco();
-    expect(Object.keys(disco)).toEqual(['matches', 'objetivos', 'perfil', 'analisis']);
+    expect(Object.keys(disco)).toEqual([
+      'matches',
+      'objetivos',
+      'perfil',
+      'analisis',
+      'analisisHistorial',
+    ]);
     expect(disco.matches).toHaveLength(1);
     // sin claves extra del store (hydrated, funciones…)
     expect(disco.hydrated).toBeUndefined();
@@ -64,9 +84,12 @@ describe('ligaStore', () => {
 
   test('importarEstado reemplaza todo y persiste', async () => {
     await useLigaStore.getState().guardarPartido(mkMatch({ id: 99 }));
-    await useLigaStore.getState().importarEstado(BACKUP_BRIEF);
+    await useLigaStore
+      .getState()
+      .importarEstado({ ...BACKUP_BRIEF, analisisHistorial: [BACKUP_BRIEF.analisis!] });
     const s = useLigaStore.getState();
     expect(s.matches.map((m) => m.id)).toEqual([1234567890]);
     expect((await leerDisco()).objetivos).toEqual(['obj1', 'obj2', 'obj3']);
+    expect(s.analisisHistorial).toHaveLength(1);
   });
 });

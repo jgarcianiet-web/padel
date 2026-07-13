@@ -25,6 +25,7 @@ export const useLigaStore = create<LigaStore>((set, get) => ({
   hydrate: async () => {
     const guardado = await readState();
     if (guardado) {
+      const analisis = guardado.analisis ?? null;
       set({
         matches: guardado.matches ?? [],
         objetivos:
@@ -32,7 +33,13 @@ export const useLigaStore = create<LigaStore>((set, get) => ({
             ? guardado.objetivos
             : get().objetivos,
         perfil: guardado.perfil ?? get().perfil,
-        analisis: guardado.analisis ?? null,
+        analisis,
+        // datos guardados por versiones sin historial: sembrar con el último
+        analisisHistorial: Array.isArray(guardado.analisisHistorial)
+          ? guardado.analisisHistorial
+          : analisis
+            ? [analisis]
+            : [],
       });
     }
     set({ hydrated: true });
@@ -59,7 +66,7 @@ export const useLigaStore = create<LigaStore>((set, get) => ({
   },
 
   guardarAnalisis: async (analisis) => {
-    set({ analisis });
+    set({ analisis, analisisHistorial: [...get().analisisHistorial, analisis] });
     await persistir(get());
   },
 
@@ -69,6 +76,7 @@ export const useLigaStore = create<LigaStore>((set, get) => ({
       objetivos: estado.objetivos,
       perfil: estado.perfil,
       analisis: estado.analisis,
+      analisisHistorial: estado.analisisHistorial,
     });
     await persistir(get());
   },

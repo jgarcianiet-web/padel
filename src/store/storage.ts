@@ -17,9 +17,9 @@ export async function readState(): Promise<LigaState | null> {
 }
 
 export async function writeState(state: LigaState): Promise<void> {
-  const { matches, objetivos, perfil, analisis } = state;
+  const { matches, objetivos, perfil, analisis, analisisHistorial } = state;
   await AsyncStorage.setItem(
     STORAGE_KEY,
-    JSON.stringify({ matches, objetivos, perfil, analisis })
+    JSON.stringify({ matches, objetivos, perfil, analisis, analisisHistorial })
   );
 }

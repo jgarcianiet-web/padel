@@ -26,8 +26,9 @@ export const mkMatch = (over: Partial<Match> = {}): Match => ({
   ...over,
 });
 
-// Backup con el shape EXACTO del brief — round-trip de importación.
-export const BACKUP_BRIEF: LigaState = {
+// Backup con el shape EXACTO del brief (la web-app no tiene historial de
+// análisis) — round-trip de importación.
+export const BACKUP_BRIEF: Omit<LigaState, 'analisisHistorial'> = {
   matches: [
     {
       id: 1234567890,

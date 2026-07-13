@@ -39,11 +39,15 @@ export default function PanelScreen() {
   const objetivos = useLigaStore((s) => s.objetivos);
   const perfil = useLigaStore((s) => s.perfil);
   const analisis = useLigaStore((s) => s.analisis);
+  const analisisHistorial = useLigaStore((s) => s.analisisHistorial);
   const guardarAnalisis = useLigaStore((s) => s.guardarAnalisis);
   const guardarObjetivos = useLigaStore((s) => s.guardarObjetivos);
 
   const [analizando, setAnalizando] = useState(false);
   const [errorAnalisis, setErrorAnalisis] = useState('');
+  // se incrementa al generar un análisis para que la tarjeta se despliegue
+  // una vez; no se persiste: al reabrir la app la tarjeta empieza plegada
+  const [nuevoAnalisisTick, setNuevoAnalisisTick] = useState(0);
 
   const racha = calcRacha(matches);
   const mejorRacha = calcMejorRacha(matches);
@@ -66,8 +70,9 @@ export default function PanelScreen() {
     setAnalizando(true);
     setErrorAnalisis('');
     try {
-      const nuevo = await analizarLiga({ matches, objetivos, perfil, analisis });
+      const nuevo = await analizarLiga({ matches, objetivos, perfil, analisis, analisisHistorial });
       await guardarAnalisis(nuevo);
+      setNuevoAnalisisTick((t) => t + 1);
     } catch (e) {
       setErrorAnalisis(
         e instanceof AnthropicError
@@ -156,6 +161,9 @@ export default function PanelScreen() {
             error={errorAnalisis}
             onAnalizar={onAnalizar}
             onAplicarObjetivos={(o) => guardarObjetivos(o)}
+            nuevoAnalisisTick={nuevoAnalisisTick}
+            hayHistorial={analisisHistorial.length > 0}
+            onVerHistorial={() => router.push('/analisis')}
           />
         )}
         {matches.length > 0 && matches.length < 3 && (

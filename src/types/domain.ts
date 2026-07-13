@@ -76,7 +76,8 @@ export interface LigaState {
   matches: Match[];
   objetivos: string[]; // los 3 objetivos activos por partido
   perfil: Perfil;
-  analisis: Analisis | null;
+  analisis: Analisis | null; // el último análisis (compatible con la web-app)
+  analisisHistorial: Analisis[]; // todos los generados, en orden cronológico
 }
 
 export interface StatsFila {

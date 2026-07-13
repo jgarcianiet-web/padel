@@ -33,6 +33,7 @@ export default function AjustesScreen() {
   const objetivos = useLigaStore((s) => s.objetivos);
   const perfil = useLigaStore((s) => s.perfil);
   const analisis = useLigaStore((s) => s.analisis);
+  const analisisHistorial = useLigaStore((s) => s.analisisHistorial);
   const guardarObjetivos = useLigaStore((s) => s.guardarObjetivos);
   const guardarPerfil = useLigaStore((s) => s.guardarPerfil);
   const importarEstado = useLigaStore((s) => s.importarEstado);
@@ -130,7 +131,7 @@ export default function AjustesScreen() {
     setPidiendoPermisos(false);
   };
 
-  const estado = { matches, objetivos, perfil, analisis };
+  const estado = { matches, objetivos, perfil, analisis, analisisHistorial };
 
   const onExportarArchivo = async () => {
     try {

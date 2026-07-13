@@ -17,6 +17,7 @@ import Cabecera from '../components/Cabecera';
 import Card from '../components/Card';
 import ChipList from '../components/ChipList';
 import GolpeSelector from '../components/GolpeSelector';
+import HealthCard from '../components/HealthCard';
 import MarcadorGrid from '../components/Marcador';
 import ObjectivesChecklist from '../components/ObjectivesChecklist';
 import Toggle from '../components/Toggle';
@@ -41,6 +42,7 @@ import {
   Match,
   Posicion,
   ResultadoPartido,
+  SaludPartido,
   SetMarcador,
   TipoPartido,
 } from '../types/domain';
@@ -75,6 +77,7 @@ export default function PartidoScreen() {
   const [bandMediaJugador, setBandMediaJugador] = useState('');
   const [objsCumplidos, setObjsCumplidos] = useState([false, false, false]);
   const [nota, setNota] = useState('');
+  const [salud, setSalud] = useState<SaludPartido | null>(null);
   const [guardando, setGuardando] = useState(false);
 
   const limpiarFormulario = () => {
@@ -98,6 +101,7 @@ export default function PartidoScreen() {
     setBandMediaJugador('');
     setObjsCumplidos([false, false, false]);
     setNota('');
+    setSalud(null);
   };
 
   // precarga del partido en edición (navegación desde Historial con ?id=)
@@ -137,6 +141,7 @@ export default function PartidoScreen() {
     );
     setObjsCumplidos([...editando.objetivos]);
     setNota(editando.nota || '');
+    setSalud(editando.salud ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editando?.id]);
 
@@ -200,7 +205,7 @@ export default function PartidoScreen() {
       bandInicio: bandInicio ? parseFloat(bandInicio) : null,
       bandFin: bandFin ? parseFloat(bandFin) : null,
       bandMediaJugador: bandMediaJugador ? parseFloat(bandMediaJugador) : null,
-      salud: editando ? (editando.salud ?? null) : null,
+      salud,
     };
     await guardarPartido(m);
     setGuardando(false);
@@ -372,6 +377,16 @@ export default function PartidoScreen() {
               onPunt={setPeorPunt}
             />
             <Text style={styles.escala}>Escala: 1 peor · 7 mejor</Text>
+          </Card>
+
+          <Card>
+            <Text style={S.label}>Salud (Apple Watch)</Text>
+            <HealthCard
+              fecha={fecha}
+              salud={salud}
+              onVincular={setSalud}
+              onDesvincular={() => setSalud(null)}
+            />
           </Card>
 
           <Card>

@@ -4,6 +4,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import Cabecera from '../components/Cabecera';
 import Card from '../components/Card';
+import { fmtSalud } from '../components/HealthCard';
 import { exportarCSV } from '../lib/csv';
 import { fmtFecha, hoy } from '../lib/date';
 import { bienJugado, calcMeses } from '../lib/metrics';
@@ -128,6 +129,7 @@ export default function HistorialScreen() {
                         {m.golpesSesion ? ` · 📷 ${m.golpesSesion.length} golpes de la Band` : ''}
                       </Text>
                     )}
+                    {m.salud ? <Text style={styles.detalle}>{fmtSalud(m.salud)}</Text> : null}
                     {m.nota ? <Text style={styles.nota}>{m.nota}</Text> : null}
                   </View>
                 </Card>

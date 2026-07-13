@@ -102,6 +102,22 @@ export async function analizarLiga(state: LigaState): Promise<Analisis> {
     mejorGolpe: m.mejorGolpe ? `${m.mejorGolpe} (${m.mejorPunt}/7)` : null,
     peorGolpe: m.peorGolpe ? `${m.peorGolpe} (${m.peorPunt}/7)` : null,
     golpesSesionPadelBand: m.golpesSesion || null,
+    curvaSesionPadelBand:
+      m.bandInicio != null || m.bandFin != null
+        ? {
+            inicio: m.bandInicio ?? null,
+            fin: m.bandFin ?? null,
+            mediaHistoricaJugador: m.bandMediaJugador ?? null,
+          }
+        : null,
+    salud: m.salud
+      ? {
+          duracionMin: m.salud.duracionMin,
+          pulsoMedio: m.salud.pulsoMedio,
+          pulsoMax: m.salud.pulsoMax,
+          calorias: m.salud.calorias,
+        }
+      : null,
     objetivosCumplidos: m.objetivos.map((c, i) => (c ? objetivos[i] : null)).filter(Boolean),
     objetivosFallados: m.objetivos.map((c, i) => (!c ? objetivos[i] : null)).filter(Boolean),
     bienJugado: bienJugado(m),
@@ -124,6 +140,8 @@ SEMÁNTICA DE LOS DATOS:
 - nivelPadelBandSesion mide la calidad de golpeo SOLO de esa sesión (escala 1 peor - 7 mejor). No es acumulativo.
 - mejorGolpe/peorGolpe van puntuados de 1 (peor) a 7 (mejor).
 - golpesSesionPadelBand: cuando existe, es el desglose completo de la sesión capturado de la app Padel Band (todos los golpes con su nota 1-7). Es el dato más rico: úsalo para analizar la evolución de cada golpe entre sesiones.
+- curvaSesionPadelBand: cuando existe, es la curva de progreso DENTRO de esa sesión (nivel al inicio, nivel al final y media histórica del jugador). Un fin muy por debajo del inicio sugiere fatiga o desconexión al final de la sesión; compara también inicio/fin con la media histórica.
+- salud: cuando existe, son los datos del Apple Watch del partido (duración en minutos, pulso medio y máximo, calorías). Correlaciona el esfuerzo físico con los resultados y la calidad de golpeo: ¿rinde peor en partidos largos o de pulso alto?, ¿su nivel Band cae cuando el esfuerzo se dispara?
 - posicion: lado en que jugó (reves o derecha).
 
 REGISTRO (orden cronológico):

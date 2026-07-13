@@ -21,6 +21,7 @@ import { CATALOGO_OBJETIVOS } from '../constants/catalogos';
 import { deleteApiKey, getApiKey, setApiKey } from '../lib/anthropic';
 import { exportarBackup, importarBackup } from '../lib/backup';
 import { fmtFecha, hoy } from '../lib/date';
+import { MSG_SIN_HEALTH, healthDisponible, pedirPermisos } from '../lib/health';
 import { compartirJSON } from '../lib/share';
 import { useLigaStore } from '../store/ligaStore';
 import { T } from '../theme/colors';
@@ -51,6 +52,9 @@ export default function AjustesScreen() {
   const [textoImport, setTextoImport] = useState('');
   const [msgImport, setMsgImport] = useState('');
   const [msgBackup, setMsgBackup] = useState('');
+
+  const [pidiendoPermisos, setPidiendoPermisos] = useState(false);
+  const [msgHealth, setMsgHealth] = useState('');
 
   useEffect(() => {
     setPerfilDraft(perfil);
@@ -112,6 +116,18 @@ export default function AjustesScreen() {
         },
       },
     ]);
+  };
+
+  const onPedirPermisos = async () => {
+    if (pidiendoPermisos) return;
+    setPidiendoPermisos(true);
+    try {
+      await pedirPermisos();
+      setMsgHealth('✓ Acceso gestionado: elige qué datos compartir en el diálogo de iOS');
+    } catch (e) {
+      setMsgHealth(e instanceof Error ? e.message : 'No se pudo solicitar el acceso.');
+    }
+    setPidiendoPermisos(false);
   };
 
   const estado = { matches, objetivos, perfil, analisis };
@@ -358,16 +374,36 @@ export default function AjustesScreen() {
             </Pressable>
           </Card>
 
-          {/* HealthKit — fase 2 */}
-          <Card style={styles.cardDeshabilitada}>
+          {/* Apple Health */}
+          <Card>
             <Text style={S.label}>Apple Health</Text>
             <Text style={styles.ayuda}>
               Vincula tus entrenamientos de pádel del Apple Watch (duración, pulso, calorías) con
-              cada partido. Disponible en la próxima fase.
+              cada partido desde el formulario de registro.
             </Text>
-            <Pressable style={[S.btnSec, { opacity: 0.4 }]} disabled>
-              <Text style={S.btnSecText}>Próximamente</Text>
-            </Pressable>
+            {healthDisponible() ? (
+              <>
+                {msgHealth ? (
+                  <Text style={msgHealth.startsWith('✓') ? styles.ok : styles.error}>
+                    {msgHealth}
+                  </Text>
+                ) : null}
+                <Pressable
+                  style={[S.btnSec, { marginTop: 10 }, pidiendoPermisos && { opacity: 0.55 }]}
+                  disabled={pidiendoPermisos}
+                  onPress={onPedirPermisos}>
+                  <Text style={S.btnSecText}>
+                    {pidiendoPermisos ? 'Solicitando…' : 'Conceder acceso a Salud'}
+                  </Text>
+                </Pressable>
+                <Text style={styles.notaPie}>
+                  iOS no revela si el permiso de lectura está concedido: si al buscar
+                  entrenamientos no aparece ninguno, revisa Ajustes → Salud → Acceso a datos.
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.ayuda}>{MSG_SIN_HEALTH}</Text>
+            )}
           </Card>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -379,7 +415,6 @@ const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: T.fondo },
   scroll: { paddingHorizontal: 16, paddingBottom: 24 },
   cardDestacada: { borderLeftWidth: 4, borderLeftColor: T.pista },
-  cardDeshabilitada: { opacity: 0.75 },
   ayuda: {
     fontSize: 12.5,
     color: T.tintaSuave,

@@ -1,0 +1,95 @@
+// Contrato de datos: idéntico al de la web-app original para que la copia de
+// seguridad JSON existente del usuario importe sin transformación alguna.
+// No normalizar la asimetría string/number: perfil.* son strings (inputs de
+// texto) y match.nivel/nivelBand son numbers.
+
+export type TipoPartido = 'competitivo' | 'amistoso';
+export type ResultadoPartido = 'victoria' | 'empate' | 'derrota';
+export type Posicion = 'reves' | 'derecha';
+
+export interface SetMarcador {
+  yo: string;
+  rival: string;
+  tbYo: string;
+  tbRival: string;
+}
+
+export interface GolpeSesion {
+  nombre: string;
+  nota: number;
+}
+
+export interface Match {
+  id: number;
+  fecha: string; // ISO yyyy-mm-dd
+  tipo: TipoPartido;
+  resultado: ResultadoPartido;
+  posicion: Posicion;
+  sets: string; // "6-4, 7-6(8-6), 3-6"
+  marcador: SetMarcador[] | null;
+  club: string;
+  companero: string;
+  nivel: number | null;
+  nivelBand: number | null;
+  mejorGolpe: string | null;
+  mejorPunt: number | null;
+  peorGolpe: string | null;
+  peorPunt: number | null;
+  golpesSesion: GolpeSesion[] | null;
+  objetivos: boolean[]; // longitud 3
+  nota: string;
+}
+
+export interface Perfil {
+  nivelPlaytomic: string;
+  nivelBand: string;
+  nivelObjetivo: string;
+  fechaInicio: string;
+}
+
+export interface Analisis {
+  lectura: string;
+  patrones: string[];
+  plan: string[];
+  foco: string;
+  objetivos: string[]; // 3 objetivos prescritos
+  fecha: string;
+  nPartidos: number;
+}
+
+export interface LigaState {
+  matches: Match[];
+  objetivos: string[]; // los 3 objetivos activos por partido
+  perfil: Perfil;
+  analisis: Analisis | null;
+}
+
+export interface StatsFila {
+  etiqueta: string;
+  n: number;
+  pctV: number | null;
+  pctBJ: number | null;
+}
+
+export interface GolpeAgregado {
+  golpe: string;
+  veces: number;
+  media: number;
+}
+
+export interface ChartPoint {
+  fecha: string; // ya formateada para el eje X
+  nivel: number | null;
+  band: number | null;
+}
+
+export interface MesGrupo {
+  clave: string; // "Julio de 2026"
+  items: Match[];
+}
+
+// Respuesta de la lectura de captura de Padel Band (visión)
+export interface CapturaBand {
+  nivelSesion: number | null;
+  golpes: GolpeSesion[];
+}

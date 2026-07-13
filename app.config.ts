@@ -1,7 +1,8 @@
 import { ExpoConfig } from 'expo/config';
 
-// EAS: tras ejecutar `eas init` en tu máquina, el projectId se añade aquí
-// (extra.eas.projectId) y la URL de updates queda operativa.
+// EAS: tras ejecutar `eas init` en tu máquina, pega el projectId que te dé
+// en la cadena de abajo (o exporta EAS_PROJECT_ID). Con él quedan operativos
+// extra.eas.projectId y la URL de EAS Update. Guía completa: docs/TESTFLIGHT.md
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? '';
 
 const config: ExpoConfig = {
@@ -20,6 +21,9 @@ const config: ExpoConfig = {
         'La app usa la cámara para fotografiar la pantalla de resultados de Padel Band y rellenar tus golpes automáticamente.',
       NSPhotoLibraryUsageDescription:
         'La app accede a tus fotos para leer capturas de pantalla de Padel Band y rellenar tus golpes automáticamente.',
+      // Solo HTTPS estándar: exenta de declarar cifrado. Evita la pregunta
+      // de "Export Compliance" en cada build de TestFlight.
+      ITSAppUsesNonExemptEncryption: false,
     },
   },
   android: {

@@ -1,6 +1,20 @@
+import {
+  Barlow_400Regular,
+  Barlow_600SemiBold,
+  Barlow_700Bold,
+} from '@expo-google-fonts/barlow';
+import {
+  ChakraPetch_500Medium,
+  ChakraPetch_600SemiBold,
+  ChakraPetch_700Bold,
+} from '@expo-google-fonts/chakra-petch';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
+
+import { useLigaStore } from '@/src/store/ligaStore';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -11,15 +25,36 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  // Las fuentes y la hidratación del store se enganchan aquí en pasos
-  // posteriores; de momento solo ocultamos el splash al montar.
+  const [fontsLoaded, fontError] = useFonts({
+    ChakraPetch_500Medium,
+    ChakraPetch_600SemiBold,
+    ChakraPetch_700Bold,
+    Barlow_400Regular,
+    Barlow_600SemiBold,
+    Barlow_700Bold,
+  });
+  const hydrated = useLigaStore((s) => s.hydrated);
+
   useEffect(() => {
-    SplashScreen.hideAsync();
+    useLigaStore.getState().hydrate();
   }, []);
 
+  useEffect(() => {
+    if (fontError) throw fontError;
+  }, [fontError]);
+
+  useEffect(() => {
+    if (fontsLoaded && hydrated) SplashScreen.hideAsync();
+  }, [fontsLoaded, hydrated]);
+
+  if (!fontsLoaded || !hydrated) return null; // el splash sigue visible
+
   return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
+    <>
+      <StatusBar style="dark" />
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack>
+    </>
   );
 }

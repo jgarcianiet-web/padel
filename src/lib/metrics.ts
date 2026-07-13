@@ -1,0 +1,164 @@
+import {
+  ChartPoint,
+  GolpeAgregado,
+  Match,
+  MesGrupo,
+  Perfil,
+  StatsFila,
+} from '../types/domain';
+import { fmtFecha, fmtMes } from './date';
+
+// "Partido bien jugado" = cumplir 2 de los 3 objetivos. Métrica estrella.
+export const bienJugado = (m: Match): boolean =>
+  m.objetivos.filter(Boolean).length >= 2;
+
+// Racha actual: partidos bien jugados consecutivos desde el más reciente.
+export const calcRacha = (matches: Match[]): number => {
+  let racha = 0;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    if (bienJugado(matches[i])) racha++;
+    else break;
+  }
+  return racha;
+};
+
+export const calcMejorRacha = (matches: Match[]): number => {
+  let mejor = 0;
+  let r = 0;
+  matches.forEach((m) => {
+    r = bienJugado(m) ? r + 1 : 0;
+    if (r > mejor) mejor = r;
+  });
+  return mejor;
+};
+
+export const calcPctVictorias = (matches: Match[]): number => {
+  const victorias = matches.filter((m) => m.resultado === 'victoria').length;
+  return matches.length ? Math.round((victorias / matches.length) * 100) : 0;
+};
+
+export const calcNivelActual = (matches: Match[], perfil: Perfil): number | null => {
+  const conNivel = matches.filter((m) => m.nivel != null);
+  if (conNivel.length) return conNivel[conNivel.length - 1].nivel as number;
+  return perfil.nivelPlaytomic ? parseFloat(perfil.nivelPlaytomic) : null;
+};
+
+export const calcNivelInicial = (matches: Match[], perfil: Perfil): number | null => {
+  if (perfil.nivelPlaytomic) return parseFloat(perfil.nivelPlaytomic);
+  const conNivel = matches.filter((m) => m.nivel != null);
+  return conNivel.length ? (conNivel[0].nivel as number) : null;
+};
+
+// Delta como string con signo ya redondeado a 2 decimales (igual que la web).
+export const calcDeltaNivel = (matches: Match[], perfil: Perfil): string | null => {
+  const actual = calcNivelActual(matches, perfil);
+  const inicial = calcNivelInicial(matches, perfil);
+  return actual != null && inicial != null ? (actual - inicial).toFixed(2) : null;
+};
+
+export const calcBandMedia = (matches: Match[], perfil: Perfil): number | null => {
+  const conBand = matches.filter((m) => m.nivelBand != null);
+  if (conBand.length) {
+    return conBand.reduce((a, m) => a + (m.nivelBand as number), 0) / conBand.length;
+  }
+  return perfil.nivelBand ? parseFloat(perfil.nivelBand) : null;
+};
+
+const statsDe = (etiqueta: string, ms: Match[]): StatsFila => {
+  const v = ms.filter((m) => m.resultado === 'victoria').length;
+  const bj = ms.filter((m) => bienJugado(m)).length;
+  return {
+    etiqueta,
+    n: ms.length,
+    pctV: ms.length ? Math.round((v / ms.length) * 100) : null,
+    pctBJ: ms.length ? Math.round((bj / ms.length) * 100) : null,
+  };
+};
+
+export const calcStatsTipo = (matches: Match[]): StatsFila[] => [
+  statsDe('Competitivo', matches.filter((m) => m.tipo === 'competitivo')),
+  statsDe('Amistoso', matches.filter((m) => m.tipo === 'amistoso')),
+];
+
+export const calcStatsPos = (matches: Match[]): StatsFila[] => [
+  statsDe('Revés', matches.filter((m) => m.posicion === 'reves')),
+  statsDe('Derecha', matches.filter((m) => m.posicion === 'derecha')),
+];
+
+// Últimos 6 valores únicos, como la web-app (chips de club/compañero).
+export const calcClubesPrevios = (matches: Match[]): string[] =>
+  [...new Set(matches.map((m) => m.club).filter(Boolean))].slice(-6);
+
+export const calcCompanerosPrevios = (matches: Match[]): string[] =>
+  [...new Set(matches.map((m) => m.companero).filter(Boolean))].slice(-6);
+
+export const calcStatsCompanero = (matches: Match[]): StatsFila[] =>
+  calcCompanerosPrevios(matches)
+    .map((c) => statsDe(c, matches.filter((m) => m.companero === c)))
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 4);
+
+const agregaGolpes = (
+  matches: Match[],
+  campo: 'mejorGolpe' | 'peorGolpe',
+  puntCampo: 'mejorPunt' | 'peorPunt'
+): GolpeAgregado[] => {
+  const mapa: Record<string, { veces: number; suma: number }> = {};
+  matches.forEach((m) => {
+    const golpe = m[campo];
+    const punt = m[puntCampo];
+    if (golpe && punt) {
+      if (!mapa[golpe]) mapa[golpe] = { veces: 0, suma: 0 };
+      mapa[golpe].veces++;
+      mapa[golpe].suma += punt;
+    }
+  });
+  return Object.entries(mapa)
+    .map(([golpe, d]) => ({ golpe, veces: d.veces, media: d.suma / d.veces }))
+    .sort((a, b) => b.veces - a.veces)
+    .slice(0, 3);
+};
+
+export const calcTopMejores = (matches: Match[]): GolpeAgregado[] =>
+  agregaGolpes(matches, 'mejorGolpe', 'mejorPunt');
+
+export const calcTopPeores = (matches: Match[]): GolpeAgregado[] =>
+  agregaGolpes(matches, 'peorGolpe', 'peorPunt');
+
+// Progreso hacia la meta de temporada, 0-100 (null si falta algún dato o la
+// meta no supera el nivel inicial).
+export const calcProgresoMeta = (matches: Match[], perfil: Perfil): number | null => {
+  const objetivo = perfil.nivelObjetivo ? parseFloat(perfil.nivelObjetivo) : null;
+  const inicial = calcNivelInicial(matches, perfil);
+  const actual = calcNivelActual(matches, perfil);
+  if (objetivo == null || inicial == null || actual == null || objetivo <= inicial) return null;
+  return Math.max(0, Math.min(100, Math.round(((actual - inicial) / (objetivo - inicial)) * 100)));
+};
+
+export const calcChartData = (matches: Match[]): ChartPoint[] =>
+  matches
+    .filter((m) => m.nivel != null || m.nivelBand != null)
+    .map((m) => ({ fecha: fmtFecha(m.fecha), nivel: m.nivel, band: m.nivelBand }));
+
+export const calcUltimos8 = (matches: Match[]): Match[] => matches.slice(-8);
+
+// Historial agrupado por mes, del más reciente al más antiguo.
+export const calcMeses = (matches: Match[]): MesGrupo[] => {
+  const meses: MesGrupo[] = [];
+  [...matches].reverse().forEach((m) => {
+    const clave = fmtMes(m.fecha);
+    let g = meses.find((x) => x.clave === clave);
+    if (!g) {
+      g = { clave, items: [] };
+      meses.push(g);
+    }
+    g.items.push(m);
+  });
+  return meses;
+};
+
+// Inserta o reemplaza un partido y mantiene el orden cronológico ascendente.
+export const upsertMatch = (matches: Match[], match: Match): Match[] =>
+  [...matches.filter((m) => m.id !== match.id), match].sort((a, b) =>
+    a.fecha < b.fecha ? -1 : 1
+  );

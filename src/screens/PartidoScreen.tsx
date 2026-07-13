@@ -20,7 +20,7 @@ import GolpeSelector from '../components/GolpeSelector';
 import MarcadorGrid from '../components/Marcador';
 import ObjectivesChecklist from '../components/ObjectivesChecklist';
 import Toggle from '../components/Toggle';
-import { GOLPES } from '../constants/catalogos';
+import { aplicarCaptura } from '../lib/band';
 import { fmtFecha, hoy } from '../lib/date';
 import {
   calcularResultado,
@@ -70,6 +70,9 @@ export default function PartidoScreen() {
   const [peorGolpe, setPeorGolpe] = useState('');
   const [peorPunt, setPeorPunt] = useState(0);
   const [golpesSesion, setGolpesSesion] = useState<GolpeSesion[]>([]);
+  const [bandInicio, setBandInicio] = useState('');
+  const [bandFin, setBandFin] = useState('');
+  const [bandMediaJugador, setBandMediaJugador] = useState('');
   const [objsCumplidos, setObjsCumplidos] = useState([false, false, false]);
   const [nota, setNota] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -90,6 +93,9 @@ export default function PartidoScreen() {
     setPeorGolpe('');
     setPeorPunt(0);
     setGolpesSesion([]);
+    setBandInicio('');
+    setBandFin('');
+    setBandMediaJugador('');
     setObjsCumplidos([false, false, false]);
     setNota('');
   };
@@ -124,6 +130,11 @@ export default function PartidoScreen() {
     setPeorGolpe(editando.peorGolpe || '');
     setPeorPunt(editando.peorPunt || 0);
     setGolpesSesion(editando.golpesSesion || []);
+    setBandInicio(editando.bandInicio != null ? String(editando.bandInicio) : '');
+    setBandFin(editando.bandFin != null ? String(editando.bandFin) : '');
+    setBandMediaJugador(
+      editando.bandMediaJugador != null ? String(editando.bandMediaJugador) : ''
+    );
     setObjsCumplidos([...editando.objetivos]);
     setNota(editando.nota || '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -133,22 +144,26 @@ export default function PartidoScreen() {
   const clubesPrevios = calcClubesPrevios(matches);
   const companerosPrevios = calcCompanerosPrevios(matches);
 
-  const aplicarCaptura = (captura: CapturaBand) => {
-    if (captura.golpes.length > 0) {
-      // nivel de la sesión = media de todos los golpes capturados
-      const media = captura.golpes.reduce((a, g) => a + g.nota, 0) / captura.golpes.length;
-      setNivelBand(media.toFixed(1));
-      setGolpesSesion(captura.golpes);
-      const mejor = [...captura.golpes].sort((a, b) => b.nota - a.nota)[0];
-      const peor = [...captura.golpes].sort((a, b) => a.nota - b.nota)[0];
-      const aLista = (n: string) => GOLPES.find((g) => g.toLowerCase() === n.toLowerCase()) || n;
-      setMejorGolpe(aLista(mejor.nombre));
-      setMejorPunt(Math.round(mejor.nota));
-      setPeorGolpe(aLista(peor.nombre));
-      setPeorPunt(Math.round(peor.nota));
-    } else if (captura.nivelSesion != null) {
-      setNivelBand(String(captura.nivelSesion));
-    }
+  // Cada tipo de captura rellena solo sus campos (ver src/lib/band.ts), de
+  // modo que da igual el orden en que se suban las dos pantallas. El nivel de
+  // la sesión sigue siendo editable a mano después.
+  const onCaptura = (captura: CapturaBand) => {
+    const patch = aplicarCaptura(captura);
+    if (patch.nivelBand !== undefined) setNivelBand(patch.nivelBand);
+    if (patch.golpesSesion !== undefined) setGolpesSesion(patch.golpesSesion);
+    if (patch.mejorGolpe !== undefined) setMejorGolpe(patch.mejorGolpe);
+    if (patch.mejorPunt !== undefined) setMejorPunt(patch.mejorPunt);
+    if (patch.peorGolpe !== undefined) setPeorGolpe(patch.peorGolpe);
+    if (patch.peorPunt !== undefined) setPeorPunt(patch.peorPunt);
+    if (patch.bandInicio !== undefined) setBandInicio(patch.bandInicio);
+    if (patch.bandFin !== undefined) setBandFin(patch.bandFin);
+    if (patch.bandMediaJugador !== undefined) setBandMediaJugador(patch.bandMediaJugador);
+  };
+
+  const descartarCurva = () => {
+    setBandInicio('');
+    setBandFin('');
+    setBandMediaJugador('');
   };
 
   const salir = () => {
@@ -182,6 +197,10 @@ export default function PartidoScreen() {
       golpesSesion: golpesSesion.length > 0 ? golpesSesion : null,
       objetivos: [...objsCumplidos],
       nota: nota.trim(),
+      bandInicio: bandInicio ? parseFloat(bandInicio) : null,
+      bandFin: bandFin ? parseFloat(bandFin) : null,
+      bandMediaJugador: bandMediaJugador ? parseFloat(bandMediaJugador) : null,
+      salud: editando ? (editando.salud ?? null) : null,
     };
     await guardarPartido(m);
     setGuardando(false);
@@ -331,8 +350,12 @@ export default function PartidoScreen() {
             <Text style={S.label}>Golpes destacados</Text>
             <BandCapture
               golpesSesion={golpesSesion}
-              onResultado={aplicarCaptura}
-              onDescartar={() => setGolpesSesion([])}
+              bandInicio={bandInicio}
+              bandFin={bandFin}
+              bandMediaJugador={bandMediaJugador}
+              onResultado={onCaptura}
+              onDescartarGolpes={() => setGolpesSesion([])}
+              onDescartarCurva={descartarCurva}
             />
             <GolpeSelector
               titulo="Mejor golpe"

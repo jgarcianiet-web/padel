@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 
 import { Analisis, CapturaBand, LigaState } from '../types/domain';
+import { parseCapturaBand } from './band';
 import { hoy } from './date';
 import { bienJugado } from './metrics';
 
@@ -173,17 +174,30 @@ export async function procesarCapturaBand(
   base64: string,
   mediaType: string
 ): Promise<CapturaBand> {
-  const promptVision = `Esta es una captura de pantalla de la app Padel Band con las puntuaciones de golpes de una sesión de pádel (escala 1 a 7, puede haber decimales).
+  const promptVision = `Esta es una captura de pantalla de la app Padel Band de una sesión de pádel. Puede ser una de estas dos pantallas:
 
-Extrae TODOS los golpes visibles con su puntuación. Si aparece una puntuación o nivel global de la sesión, extráelo también.
+A) PANTALLA DE GOLPES: lista de golpes con su puntuación (escala 1 a 7, puede haber decimales). Puede incluir también una puntuación o nivel global de la sesión.
 
-Responde SOLO con un objeto JSON válido, sin Markdown ni texto fuera del JSON:
+B) PANTALLA "PROGRESO DE LA SESIÓN": una curva/gráfica de evolución del nivel a lo largo de la sesión, con un valor al inicio de la curva, un valor al final, y normalmente una línea horizontal que marca la media histórica del jugador.
+
+Identifica primero cuál de las dos es y responde SOLO con un objeto JSON válido, sin Markdown ni texto fuera del JSON.
+
+Si es la pantalla de golpes, extrae TODOS los golpes visibles con su puntuación:
 {
+  "tipo": "golpes",
   "nivelSesion": número o null si no aparece,
   "golpes": [{"nombre": "nombre del golpe en español tal como aparece", "nota": número}]
 }
 
-Si la imagen no parece una captura de Padel Band o no hay puntuaciones legibles, responde: {"nivelSesion": null, "golpes": []}`;
+Si es la pantalla de progreso de la sesión:
+{
+  "tipo": "progreso",
+  "inicio": número al inicio de la curva o null si no es legible,
+  "fin": número al final de la curva o null,
+  "mediaJugador": número de la línea horizontal de media del jugador o null
+}
+
+Si la imagen no parece una captura de Padel Band o no hay datos legibles, responde: {"tipo": "desconocido"}`;
 
   const texto = await callAnthropic(
     [
@@ -192,9 +206,5 @@ Si la imagen no parece una captura de Padel Band o no hay puntuaciones legibles,
     ],
     1500
   );
-  const parsed = JSON.parse(limpiarJson(texto));
-  const golpes = (parsed.golpes || []).filter(
-    (g: { nombre?: string; nota?: unknown }) => g.nombre && typeof g.nota === 'number'
-  );
-  return { nivelSesion: parsed.nivelSesion ?? null, golpes };
+  return parseCapturaBand(limpiarJson(texto));
 }

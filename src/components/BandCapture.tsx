@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AnthropicError, procesarCapturaBand } from '../lib/anthropic';
+import { capturaVacia, mediaGolpes } from '../lib/band';
 import { T } from '../theme/colors';
 import { FONT } from '../theme/typography';
 import { S } from '../theme/styles';
@@ -10,12 +11,26 @@ import { CapturaBand, GolpeSesion } from '../types/domain';
 
 interface Props {
   golpesSesion: GolpeSesion[];
+  bandInicio: string;
+  bandFin: string;
+  bandMediaJugador: string;
   onResultado: (captura: CapturaBand) => void;
-  onDescartar: () => void;
+  onDescartarGolpes: () => void;
+  onDescartarCurva: () => void;
 }
 
 // Captura de Padel Band: foto o imagen de la galería → visión → autorrelleno.
-export default function BandCapture({ golpesSesion, onResultado, onDescartar }: Props) {
+// Acepta las dos pantallas de la app (golpes y "Progreso de la sesión") en
+// cualquier orden; cada una rellena solo sus campos.
+export default function BandCapture({
+  golpesSesion,
+  bandInicio,
+  bandFin,
+  bandMediaJugador,
+  onResultado,
+  onDescartarGolpes,
+  onDescartarCurva,
+}: Props) {
   const [capturando, setCapturando] = useState(false);
   const [error, setError] = useState('');
 
@@ -28,9 +43,9 @@ export default function BandCapture({ golpesSesion, onResultado, onDescartar }: 
     setError('');
     try {
       const captura = await procesarCapturaBand(asset.base64, asset.mimeType ?? 'image/jpeg');
-      if (captura.golpes.length === 0 && captura.nivelSesion == null) {
+      if (capturaVacia(captura)) {
         setError(
-          'No he podido leer puntuaciones en esa imagen. Prueba con una captura más nítida de la pantalla de golpes.'
+          'No he podido leer datos en esa imagen. Prueba con una captura más nítida de la pantalla de golpes o de progreso de la sesión.'
         );
       } else {
         onResultado(captura);
@@ -68,10 +83,7 @@ export default function BandCapture({ golpesSesion, onResultado, onDescartar }: 
     }
   };
 
-  const media =
-    golpesSesion.length > 0
-      ? golpesSesion.reduce((a, g) => a + g.nota, 0) / golpesSesion.length
-      : 0;
+  const hayCurva = bandInicio !== '' || bandFin !== '' || bandMediaJugador !== '';
 
   return (
     <View>
@@ -96,15 +108,16 @@ export default function BandCapture({ golpesSesion, onResultado, onDescartar }: 
         )}
       </View>
       <Text style={styles.ayuda}>
-        Sube la pantalla de golpes de tu sesión y se rellenan solos el nivel, tu mejor y peor
-        golpe, y se guarda el desglose completo.
+        Sube la pantalla de golpes (rellena el nivel de la sesión con la media, tu mejor y peor
+        golpe y el desglose) y/o la pantalla "Progreso de la sesión" (rellena la curva
+        inicio/fin y tu media histórica). En cualquier orden.
       </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {golpesSesion.length > 0 && (
         <View style={styles.resumen}>
           <Text style={[S.labelSmall, { color: T.pista, marginBottom: 6 }]}>
-            ✓ {golpesSesion.length} golpes capturados · media {media.toFixed(1)}/7
+            ✓ {golpesSesion.length} golpes capturados · media {mediaGolpes(golpesSesion)}/7
           </Text>
           <View style={styles.chips}>
             {golpesSesion.map((g, i) => (
@@ -115,8 +128,27 @@ export default function BandCapture({ golpesSesion, onResultado, onDescartar }: 
               </View>
             ))}
           </View>
-          <Pressable onPress={onDescartar}>
-            <Text style={styles.descartar}>Descartar captura</Text>
+          <Pressable onPress={onDescartarGolpes}>
+            <Text style={styles.descartar}>Descartar captura de golpes</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {hayCurva && (
+        <View style={styles.resumen}>
+          <Text style={[S.labelSmall, { color: T.pista, marginBottom: 6 }]}>
+            ✓ Progreso de la sesión
+          </Text>
+          <Text style={styles.curva}>
+            {bandInicio !== '' ? `Inicio ${bandInicio}` : ''}
+            {bandInicio !== '' && bandFin !== '' ? ' → ' : ''}
+            {bandFin !== '' ? `Fin ${bandFin}` : ''}
+            {bandMediaJugador !== ''
+              ? `${bandInicio !== '' || bandFin !== '' ? ' · ' : ''}Tu media ${bandMediaJugador}`
+              : ''}
+          </Text>
+          <Pressable onPress={onDescartarCurva}>
+            <Text style={styles.descartar}>Descartar captura de progreso</Text>
           </Pressable>
         </View>
       )}
@@ -128,7 +160,7 @@ const styles = StyleSheet.create({
   botones: { flexDirection: 'row', gap: 8, marginTop: 10 },
   btn: { flex: 1, paddingVertical: 13 },
   leyendo: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  ayuda: { fontSize: 11.5, color: T.tintaSuave, marginTop: 6, fontFamily: FONT.texto },
+  ayuda: { fontSize: 11.5, color: T.tintaSuave, marginTop: 6, fontFamily: FONT.texto, lineHeight: 16 },
   error: { fontSize: 13, color: T.rojo, marginTop: 8, fontFamily: FONT.texto },
   resumen: {
     marginTop: 10,
@@ -148,5 +180,6 @@ const styles = StyleSheet.create({
   },
   chipTexto: { fontSize: 12, color: T.tinta, fontFamily: FONT.texto },
   chipNota: { fontFamily: FONT.textoBold },
+  curva: { fontSize: 13.5, color: T.tinta, fontFamily: FONT.textoBold },
   descartar: { fontSize: 12, color: T.tintaSuave, marginTop: 6, fontFamily: FONT.texto },
 });

@@ -103,11 +103,17 @@ export default function HistorialScreen() {
                       {m.objetivos.filter(Boolean).length}/3
                       {bienJugado(m) ? ' 🔥' : ''}
                     </Text>
-                    {(m.nivel != null || m.nivelBand != null) && (
+                    {(m.nivel != null || m.nivelBand != null || m.bandInicio != null || m.bandFin != null) && (
                       <Text style={styles.detalle}>
-                        {m.nivel != null ? `Playtomic ${m.nivel.toFixed(2)}` : ''}
-                        {m.nivel != null && m.nivelBand != null ? ' · ' : ''}
-                        {m.nivelBand != null ? `Band ${m.nivelBand.toFixed(1)}` : ''}
+                        {[
+                          m.nivel != null ? `Playtomic ${m.nivel.toFixed(2)}` : null,
+                          m.nivelBand != null ? `Band ${m.nivelBand.toFixed(1)}` : null,
+                          m.bandInicio != null || m.bandFin != null
+                            ? `curva ${m.bandInicio ?? '?'}→${m.bandFin ?? '?'}${m.bandMediaJugador != null ? ` (media ${m.bandMediaJugador})` : ''}`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </Text>
                     )}
                     {(m.mejorGolpe || m.peorGolpe) && (

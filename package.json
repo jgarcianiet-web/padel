@@ -36,7 +36,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@types/jest": "^30.0.0",
+    "@types/jest": "~29.5.14",
     "@types/react": "~19.2.2",
     "jest": "^29.7.0",
     "jest-expo": "~57.0.0",
@@ -51,6 +51,15 @@
     "web": "expo start --web",
     "test": "jest",
     "typecheck": "tsc --noEmit"
+  },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "react-native-health"
+        ]
+      }
+    }
   },
   "overrides": {
     "react-native-health": {

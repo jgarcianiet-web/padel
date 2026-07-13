@@ -1,9 +1,10 @@
 import { ExpoConfig } from 'expo/config';
 
-// EAS: tras ejecutar `eas init` en tu máquina, pega el projectId que te dé
-// en la cadena de abajo (o exporta EAS_PROJECT_ID). Con él quedan operativos
-// extra.eas.projectId y la URL de EAS Update. Guía completa: docs/TESTFLIGHT.md
-const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID ?? '';
+// Proyecto EAS de jgarcianiet (creado con `eas init`). Con él quedan
+// operativos extra.eas.projectId y la URL de EAS Update.
+// Guía completa: docs/TESTFLIGHT.md
+const EAS_PROJECT_ID =
+  process.env.EAS_PROJECT_ID ?? '4538a7db-a672-4616-b2e2-2d502f8a8b76';
 
 const config: ExpoConfig = {
   name: 'Liga Personal Pádel',

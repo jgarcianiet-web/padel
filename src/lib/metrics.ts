@@ -6,6 +6,7 @@ import {
   Perfil,
   StatsFila,
 } from '../types/domain';
+import { golpeCanonico } from './band';
 import { fmtFecha, fmtMes } from './date';
 
 // "Partido bien jugado" = cumplir 2 de los 3 objetivos. Métrica estrella.
@@ -105,7 +106,8 @@ const agregaGolpes = (
 ): GolpeAgregado[] => {
   const mapa: Record<string, { veces: number; suma: number }> = {};
   matches.forEach((m) => {
-    const golpe = m[campo];
+    // canónico: unifica datos antiguos guardados como "Volea de derecha", etc.
+    const golpe = m[campo] ? golpeCanonico(m[campo] as string) : null;
     const punt = m[puntCampo];
     if (golpe && punt) {
       if (!mapa[golpe]) mapa[golpe] = { veces: 0, suma: 0 };
@@ -181,18 +183,24 @@ export interface EvolucionGolpe {
 }
 
 // Trayectoria de un golpe a través de las sesiones capturadas de Padel Band.
+// Compara por nombre canónico y fusiona variantes por lado dentro de una
+// misma sesión (datos antiguos con "Volea de derecha" + "Volea de revés").
 export const calcEvolucionGolpe = (matches: Match[], nombre: string): EvolucionGolpe => {
-  const clave = nombre.toLowerCase();
+  const clave = golpeCanonico(nombre).toLowerCase();
   const puntos: PuntoGolpe[] = [];
   matches.forEach((m) => {
-    const golpe = (m.golpesSesion ?? []).find((g) => g.nombre.toLowerCase() === clave);
-    if (!golpe) return;
-    const volumen = (m.golpesVolumen ?? []).find((g) => g.nombre.toLowerCase() === clave);
+    const notas = (m.golpesSesion ?? [])
+      .filter((g) => golpeCanonico(g.nombre).toLowerCase() === clave)
+      .map((g) => g.nota);
+    if (notas.length === 0) return;
+    const cantidades = (m.golpesVolumen ?? [])
+      .filter((g) => golpeCanonico(g.nombre).toLowerCase() === clave)
+      .map((g) => g.cantidad);
     puntos.push({
       fecha: fmtFecha(m.fecha),
       fechaISO: m.fecha,
-      nota: golpe.nota,
-      cantidad: volumen ? volumen.cantidad : null,
+      nota: Math.round((notas.reduce((a, n) => a + n, 0) / notas.length) * 10) / 10,
+      cantidad: cantidades.length ? cantidades.reduce((a, c) => a + c, 0) : null,
     });
   });
   const notas = puntos.map((p) => p.nota);

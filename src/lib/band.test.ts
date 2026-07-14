@@ -1,4 +1,12 @@
-import { aplicarCaptura, capturaVacia, mediaGolpes, parseCapturaBand } from './band';
+import {
+  aplicarCaptura,
+  capturaVacia,
+  fusionarGolpes,
+  fusionarVolumen,
+  golpeCanonico,
+  mediaGolpes,
+  parseCapturaBand,
+} from './band';
 import { CapturaBand } from '../types/domain';
 
 const capturaGolpes: CapturaBand = {
@@ -117,6 +125,65 @@ describe('independencia del orden', () => {
     const referencia = aplicar(capturas);
     expect(aplicar([capturaVolumen, capturaGolpes, capturaProgreso])).toEqual(referencia);
     expect(aplicar([capturaProgreso, capturaVolumen, capturaGolpes])).toEqual(referencia);
+  });
+});
+
+describe('unificación de volea y globo por lado', () => {
+  test('golpeCanonico quita el sufijo de lado y casa con el catálogo', () => {
+    expect(golpeCanonico('Volea de derecha')).toBe('Volea');
+    expect(golpeCanonico('volea de revés')).toBe('Volea');
+    expect(golpeCanonico('Globo de reves')).toBe('Globo');
+    expect(golpeCanonico('GLOBO DE DERECHA')).toBe('Globo');
+    expect(golpeCanonico('Bandeja')).toBe('Bandeja');
+    expect(golpeCanonico('revés')).toBe('Revés');
+    expect(golpeCanonico('Golpe raro')).toBe('Golpe raro'); // sin match: se respeta
+  });
+
+  test('fusionarGolpes une variantes con la media de sus notas', () => {
+    const fusion = fusionarGolpes([
+      { nombre: 'Volea de derecha', nota: 4.0 },
+      { nombre: 'Bandeja', nota: 3.0 },
+      { nombre: 'Volea de revés', nota: 2.5 },
+      { nombre: 'Globo de derecha', nota: 5.0 },
+    ]);
+    expect(fusion).toEqual([
+      { nombre: 'Volea', nota: 3.3 }, // (4.0+2.5)/2 = 3.25 → 3.3
+      { nombre: 'Bandeja', nota: 3.0 },
+      { nombre: 'Globo', nota: 5.0 },
+    ]);
+  });
+
+  test('fusionarVolumen une variantes sumando cantidades', () => {
+    expect(
+      fusionarVolumen([
+        { nombre: 'Volea de derecha', cantidad: 30 },
+        { nombre: 'Volea de revés', cantidad: 20 },
+        { nombre: 'Remate', cantidad: 5 },
+      ])
+    ).toEqual([
+      { nombre: 'Volea', cantidad: 50 },
+      { nombre: 'Remate', cantidad: 5 },
+    ]);
+  });
+
+  test('aplicarCaptura de golpes unifica antes de elegir mejor/peor y media', () => {
+    const patch = aplicarCaptura({
+      tipo: 'golpes',
+      nivelSesion: null,
+      golpes: [
+        { nombre: 'Volea de derecha', nota: 6.0 },
+        { nombre: 'Volea de revés', nota: 2.0 },
+        { nombre: 'Saque', nota: 3.0 },
+      ],
+    });
+    // Volea fusionada = 4.0 → mejor Volea (4.0), peor Saque (3.0)
+    expect(patch.golpesSesion).toEqual([
+      { nombre: 'Volea', nota: 4.0 },
+      { nombre: 'Saque', nota: 3.0 },
+    ]);
+    expect(patch.mejorGolpe).toBe('Volea');
+    expect(patch.peorGolpe).toBe('Saque');
+    expect(patch.nivelBand).toBe('3.5'); // media de la lista fusionada
   });
 });
 

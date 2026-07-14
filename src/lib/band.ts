@@ -21,8 +21,50 @@ export interface PatchCaptura {
   totalGolpes?: number;
 }
 
-const aLista = (n: string): string =>
-  GOLPES.find((g) => g.toLowerCase() === n.toLowerCase()) || n;
+// Nombre canónico de un golpe: quita el sufijo de lado ("de derecha"/"de
+// revés") con el que Padel Band separa volea y globo, y lo casa con el
+// catálogo. "Volea de revés" → "Volea"; "globo de derecha" → "Globo".
+export const golpeCanonico = (nombre: string): string => {
+  const base = nombre.trim().replace(/\s+de\s+(derecha|rev[eé]s)$/i, '');
+  return GOLPES.find((g) => g.toLowerCase() === base.toLowerCase()) || base;
+};
+
+const redondea1 = (n: number): number => Math.round(n * 10) / 10;
+
+// Fusiona golpes con el mismo nombre canónico: la nota es la media de las
+// variantes (1 decimal) y se conserva el orden de aparición.
+export const fusionarGolpes = (golpes: GolpeSesion[]): GolpeSesion[] => {
+  const orden: string[] = [];
+  const acc: Record<string, { suma: number; n: number }> = {};
+  golpes.forEach((g) => {
+    const nombre = golpeCanonico(g.nombre);
+    if (!acc[nombre]) {
+      acc[nombre] = { suma: 0, n: 0 };
+      orden.push(nombre);
+    }
+    acc[nombre].suma += g.nota;
+    acc[nombre].n++;
+  });
+  return orden.map((nombre) => ({
+    nombre,
+    nota: redondea1(acc[nombre].suma / acc[nombre].n),
+  }));
+};
+
+// Fusiona el volumen por nombre canónico sumando cantidades.
+export const fusionarVolumen = (golpes: GolpeVolumen[]): GolpeVolumen[] => {
+  const orden: string[] = [];
+  const acc: Record<string, number> = {};
+  golpes.forEach((g) => {
+    const nombre = golpeCanonico(g.nombre);
+    if (acc[nombre] == null) {
+      acc[nombre] = 0;
+      orden.push(nombre);
+    }
+    acc[nombre] += g.cantidad;
+  });
+  return orden.map((nombre) => ({ nombre, cantidad: acc[nombre] }));
+};
 
 // Media aritmética de las notas redondeada a 1 decimal.
 export const mediaGolpes = (golpes: GolpeSesion[]): string =>
@@ -31,14 +73,16 @@ export const mediaGolpes = (golpes: GolpeSesion[]): string =>
 export function aplicarCaptura(captura: CapturaBand): PatchCaptura {
   if (captura.tipo === 'golpes') {
     if (captura.golpes.length > 0) {
-      const mejor = [...captura.golpes].sort((a, b) => b.nota - a.nota)[0];
-      const peor = [...captura.golpes].sort((a, b) => a.nota - b.nota)[0];
+      // unifica variantes por lado (volea/globo) antes de calcular nada
+      const golpes = fusionarGolpes(captura.golpes);
+      const mejor = [...golpes].sort((a, b) => b.nota - a.nota)[0];
+      const peor = [...golpes].sort((a, b) => a.nota - b.nota)[0];
       return {
-        nivelBand: mediaGolpes(captura.golpes),
-        golpesSesion: captura.golpes,
-        mejorGolpe: aLista(mejor.nombre),
+        nivelBand: mediaGolpes(golpes),
+        golpesSesion: golpes,
+        mejorGolpe: mejor.nombre,
         mejorPunt: Math.round(mejor.nota),
-        peorGolpe: aLista(peor.nombre),
+        peorGolpe: peor.nombre,
         peorPunt: Math.round(peor.nota),
       };
     }
@@ -57,7 +101,7 @@ export function aplicarCaptura(captura: CapturaBand): PatchCaptura {
   if (captura.tipo === 'volumen') {
     const patch: PatchCaptura = {};
     if (captura.golpes.length > 0) {
-      patch.golpesVolumen = captura.golpes.map((g) => ({ ...g, nombre: aLista(g.nombre) }));
+      patch.golpesVolumen = fusionarVolumen(captura.golpes);
     }
     const total =
       captura.total ?? (captura.golpes.length > 0

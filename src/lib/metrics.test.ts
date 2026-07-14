@@ -227,6 +227,39 @@ describe('chart, forma e historial', () => {
     expect(calcEvolucionGolpe(ms, 'Víbora').veces).toBe(0);
   });
 
+  test('calcEvolucionGolpe unifica variantes de volea/globo de datos antiguos', () => {
+    const ms = [
+      mkMatch({
+        fecha: '2026-07-01',
+        golpesSesion: [
+          { nombre: 'Volea de derecha', nota: 4.0 },
+          { nombre: 'Volea de revés', nota: 2.0 },
+        ],
+        golpesVolumen: [
+          { nombre: 'Volea de derecha', cantidad: 25 },
+          { nombre: 'Volea de revés', cantidad: 15 },
+        ],
+      }),
+      mkMatch({ fecha: '2026-07-08', golpesSesion: [{ nombre: 'Volea', nota: 5.0 }] }),
+    ];
+    const evo = calcEvolucionGolpe(ms, 'Volea');
+    expect(evo.veces).toBe(2);
+    expect(evo.puntos[0].nota).toBe(3.0); // media de las dos variantes
+    expect(evo.puntos[0].cantidad).toBe(40); // suma del volumen
+    expect(evo.puntos[1].nota).toBe(5.0);
+    // buscar por variante también encuentra la ficha unificada
+    expect(calcEvolucionGolpe(ms, 'Volea de revés').veces).toBe(2);
+  });
+
+  test('agregado de golpes unifica mejor/peor guardados con variantes', () => {
+    const ms = [
+      mkMatch({ mejorGolpe: 'Volea de derecha', mejorPunt: 5, peorGolpe: null, peorPunt: null }),
+      mkMatch({ mejorGolpe: 'Volea de revés', mejorPunt: 3, peorGolpe: null, peorPunt: null }),
+    ];
+    const mejores = calcTopMejores(ms);
+    expect(mejores).toEqual([{ golpe: 'Volea', veces: 2, media: 4 }]);
+  });
+
   test('upsertMatch inserta ordenado y reemplaza por id', () => {
     const a = mkMatch({ id: 1, fecha: '2026-07-02' });
     const b = mkMatch({ id: 2, fecha: '2026-07-01' });

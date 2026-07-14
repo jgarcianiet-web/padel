@@ -57,10 +57,20 @@ export const calcDeltaNivel = (matches: Match[], perfil: Perfil): string | null 
   return actual != null && inicial != null ? (actual - inicial).toFixed(2) : null;
 };
 
+// Nivel Band de la sesión de un partido: el campo directo si existe y, si no,
+// derivado de la curva "Progreso de la sesión" (media de inicio y fin).
+export const bandDeSesion = (m: Match): number | null => {
+  if (m.nivelBand != null) return m.nivelBand;
+  const puntos = [m.bandInicio, m.bandFin].filter((v): v is number => v != null);
+  return puntos.length ? puntos.reduce((a, v) => a + v, 0) / puntos.length : null;
+};
+
+// Media de TODOS los puntos Band de la gráfica (uno por partido con dato).
+// El nivel del perfil solo entra como último recurso, cuando no hay ninguno.
 export const calcBandMedia = (matches: Match[], perfil: Perfil): number | null => {
-  const conBand = matches.filter((m) => m.nivelBand != null);
-  if (conBand.length) {
-    return conBand.reduce((a, m) => a + (m.nivelBand as number), 0) / conBand.length;
+  const puntos = matches.map(bandDeSesion).filter((v): v is number => v != null);
+  if (puntos.length) {
+    return puntos.reduce((a, v) => a + v, 0) / puntos.length;
   }
   return perfil.nivelBand ? parseFloat(perfil.nivelBand) : null;
 };
@@ -139,8 +149,8 @@ export const calcProgresoMeta = (matches: Match[], perfil: Perfil): number | nul
 
 export const calcChartData = (matches: Match[]): ChartPoint[] =>
   matches
-    .filter((m) => m.nivel != null || m.nivelBand != null)
-    .map((m) => ({ fecha: fmtFecha(m.fecha), nivel: m.nivel, band: m.nivelBand }));
+    .filter((m) => m.nivel != null || bandDeSesion(m) != null)
+    .map((m) => ({ fecha: fmtFecha(m.fecha), nivel: m.nivel, band: bandDeSesion(m) }));
 
 export const calcUltimos8 = (matches: Match[]): Match[] => matches.slice(-8);
 
@@ -164,6 +174,54 @@ export const upsertMatch = (matches: Match[], match: Match): Match[] =>
   [...matches.filter((m) => m.id !== match.id), match].sort((a, b) =>
     a.fecha < b.fecha ? -1 : 1
   );
+
+// ─── resumen mensual y cumplimiento de objetivos ───
+
+export interface ResumenMes {
+  clave: string; // "Julio de 2026"
+  n: number;
+  pctV: number | null;
+  pctBJ: number | null;
+  nivelCierre: number | null; // último nivel Playtomic anotado en el mes
+}
+
+const resumenDeMes = (matches: Match[], anoMes: string, clave: string): ResumenMes => {
+  const ms = matches.filter((m) => m.fecha.startsWith(anoMes));
+  const v = ms.filter((m) => m.resultado === 'victoria').length;
+  const bj = ms.filter((m) => bienJugado(m)).length;
+  const conNivel = ms.filter((m) => m.nivel != null);
+  return {
+    clave,
+    n: ms.length,
+    pctV: ms.length ? Math.round((v / ms.length) * 100) : null,
+    pctBJ: ms.length ? Math.round((bj / ms.length) * 100) : null,
+    nivelCierre: conNivel.length ? (conNivel[conNivel.length - 1].nivel as number) : null,
+  };
+};
+
+// Mes en curso vs mes anterior (según la fecha "hoy" en ISO yyyy-mm-dd).
+export const calcResumenMensual = (
+  matches: Match[],
+  hoyIso: string
+): { actual: ResumenMes; anterior: ResumenMes } => {
+  const [ano, mes] = hoyIso.split('-').map(Number);
+  const actualKey = `${ano}-${String(mes).padStart(2, '0')}`;
+  const anoPrev = mes === 1 ? ano - 1 : ano;
+  const mesPrev = mes === 1 ? 12 : mes - 1;
+  const prevKey = `${anoPrev}-${String(mesPrev).padStart(2, '0')}`;
+  return {
+    actual: resumenDeMes(matches, actualKey, fmtMes(`${actualKey}-15`)),
+    anterior: resumenDeMes(matches, prevKey, fmtMes(`${prevKey}-15`)),
+  };
+};
+
+// % de cumplimiento de cada uno de los 3 objetivos sobre todos los partidos.
+export const calcCumplimientoObjetivos = (matches: Match[]): (number | null)[] =>
+  [0, 1, 2].map((i) => {
+    if (matches.length === 0) return null;
+    const cumplidos = matches.filter((m) => m.objetivos[i]).length;
+    return Math.round((cumplidos / matches.length) * 100);
+  });
 
 // ─── ficha de evolución de un golpe ───
 

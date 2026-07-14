@@ -8,12 +8,16 @@ import Card from '../components/Card';
 import CoachCard from '../components/CoachCard';
 import EvolutionChart from '../components/EvolutionChart';
 import GoalProgressBar from '../components/GoalProgressBar';
+import MonthSummaryCard from '../components/MonthSummaryCard';
 import PitchHero from '../components/PitchHero';
 import StatMarker from '../components/StatMarker';
 import StrokesCard from '../components/StrokesCard';
 import { AnthropicError, analizarLiga } from '../lib/anthropic';
+import { hoy } from '../lib/date';
 import {
   calcBandMedia,
+  calcCumplimientoObjetivos,
+  calcResumenMensual,
   calcChartData,
   calcDeltaNivel,
   calcMejorRacha,
@@ -64,6 +68,8 @@ export default function PanelScreen() {
   const statsComp = calcStatsCompanero(matches);
   const topMejores = calcTopMejores(matches);
   const topPeores = calcTopPeores(matches);
+  const resumenMensual = calcResumenMensual(matches, hoy());
+  const cumplimiento = calcCumplimientoObjetivos(matches);
 
   const onAnalizar = async () => {
     if (analizando) return;
@@ -128,6 +134,15 @@ export default function PanelScreen() {
         )}
 
         {chartData.length >= 2 && <EvolutionChart data={chartData} nivelInicial={nivelInicial} />}
+
+        {matches.length >= 2 && (
+          <MonthSummaryCard
+            actual={resumenMensual.actual}
+            anterior={resumenMensual.anterior}
+            objetivos={objetivos}
+            cumplimiento={cumplimiento}
+          />
+        )}
 
         {matches.length >= 2 && (
           <Card>

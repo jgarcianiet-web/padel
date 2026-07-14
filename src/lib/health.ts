@@ -38,12 +38,26 @@ interface AppleHealthKitNativo {
   ): void;
 }
 
-const healthKit = (): AppleHealthKitNativo | null =>
-  Platform.OS === 'ios' ? (NativeModules.AppleHealthKit ?? null) : null;
+const healthKit = (): AppleHealthKitNativo | null => {
+  if (Platform.OS !== 'ios') return null;
+  const hk = NativeModules.AppleHealthKit;
+  // el módulo puede existir como proxy pero sin métodos (fallo de interop):
+  // trátalo como no disponible en vez de reventar con TypeError
+  if (!hk || typeof hk.initHealthKit !== 'function') return null;
+  return hk;
+};
 
 // HealthKit requiere módulo nativo: no existe en Expo Go ni en Android. Toda
 // la app pasa por este guard para degradar con un mensaje en vez de crashear.
 export const healthDisponible = (): boolean => !!healthKit();
+
+// Línea de diagnóstico visible en Ajustes para depurar sin acceso al dispositivo.
+export const healthDiagnostico = (): string => {
+  if (Platform.OS !== 'ios') return 'plataforma sin HealthKit';
+  const hk = NativeModules.AppleHealthKit;
+  if (!hk) return 'módulo nativo: NO presente';
+  return `módulo nativo: presente · initHealthKit: ${typeof hk.initHealthKit} · getAnchoredWorkouts: ${typeof hk.getAnchoredWorkouts}`;
+};
 
 export const MSG_SIN_HEALTH =
   'Apple Health requiere la build nativa de la app (TestFlight). En Expo Go esta sección está desactivada.';

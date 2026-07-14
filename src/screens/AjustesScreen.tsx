@@ -21,7 +21,9 @@ import { CATALOGO_OBJETIVOS } from '../constants/catalogos';
 import { deleteApiKey, getApiKey, setApiKey } from '../lib/anthropic';
 import { exportarBackup, importarBackup } from '../lib/backup';
 import { fmtFecha, hoy } from '../lib/date';
-import { MSG_SIN_HEALTH, healthDisponible, pedirPermisos } from '../lib/health';
+import * as Updates from 'expo-updates';
+
+import { MSG_SIN_HEALTH, healthDiagnostico, healthDisponible, pedirPermisos } from '../lib/health';
 import { compartirJSON } from '../lib/share';
 import { useLigaStore } from '../store/ligaStore';
 import { T } from '../theme/colors';
@@ -405,6 +407,11 @@ export default function AjustesScreen() {
             ) : (
               <Text style={styles.ayuda}>{MSG_SIN_HEALTH}</Text>
             )}
+            <Text style={styles.diagnostico}>
+              JS v1.0.1 · update{' '}
+              {Updates.updateId ? Updates.updateId.slice(0, 8) : 'embebida (sin OTA)'} ·{' '}
+              {healthDiagnostico()}
+            </Text>
           </Card>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -445,4 +452,5 @@ const styles = StyleSheet.create({
   borrarClave: { marginTop: 10, alignItems: 'center', paddingVertical: 6 },
   borrarClaveTexto: { fontSize: 13, color: T.rojo, fontFamily: FONT.texto },
   areaImport: { minHeight: 80, textAlignVertical: 'top' },
+  diagnostico: { fontSize: 10.5, color: T.tintaSuave, marginTop: 10, fontFamily: FONT.texto },
 });

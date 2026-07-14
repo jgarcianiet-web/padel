@@ -18,6 +18,7 @@ import {
   calcStatsTipo,
   calcTopMejores,
   calcTopPeores,
+  calcEvolucionGolpe,
   calcUltimos8,
   upsertMatch,
 } from './metrics';
@@ -202,6 +203,28 @@ describe('chart, forma e historial', () => {
     const meses = calcMeses(ms);
     expect(meses.map((g) => g.clave)).toEqual(['Julio de 2026', 'Junio de 2026']);
     expect(meses[0].items.map((m) => m.fecha)).toEqual(['2026-07-12', '2026-07-01']);
+  });
+
+  test('calcEvolucionGolpe recorre las sesiones capturadas con volumen', () => {
+    const ms = [
+      mkMatch({
+        fecha: '2026-07-01',
+        golpesSesion: [{ nombre: 'Bandeja', nota: 3.0 }],
+        golpesVolumen: [{ nombre: 'Bandeja', cantidad: 30 }],
+      }),
+      mkMatch({ fecha: '2026-07-05', golpesSesion: [{ nombre: 'Saque', nota: 5 }] }),
+      mkMatch({ fecha: '2026-07-10', golpesSesion: [{ nombre: 'bandeja', nota: 4.5 }] }),
+      mkMatch({ fecha: '2026-07-12', golpesSesion: null }),
+    ];
+    const evo = calcEvolucionGolpe(ms, 'Bandeja');
+    expect(evo.veces).toBe(2);
+    expect(evo.puntos.map((p) => p.nota)).toEqual([3.0, 4.5]);
+    expect(evo.puntos[0].cantidad).toBe(30);
+    expect(evo.puntos[1].cantidad).toBeNull();
+    expect(evo.media).toBeCloseTo(3.75);
+    expect(evo.mejor).toBe(4.5);
+    expect(evo.peor).toBe(3.0);
+    expect(calcEvolucionGolpe(ms, 'Víbora').veces).toBe(0);
   });
 
   test('upsertMatch inserta ordenado y reemplaza por id', () => {

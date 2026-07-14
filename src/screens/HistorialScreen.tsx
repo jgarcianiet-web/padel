@@ -127,6 +127,7 @@ export default function HistorialScreen() {
                           ? `👎 ${m.peorGolpe}${m.peorPunt ? ` ${m.peorPunt}/7` : ''}`
                           : ''}
                         {m.golpesSesion ? ` · 📷 ${m.golpesSesion.length} golpes de la Band` : ''}
+                        {m.totalGolpes != null ? ` · 🔢 ${m.totalGolpes} golpeos` : ''}
                       </Text>
                     )}
                     {m.salud ? <Text style={styles.detalle}>{fmtSalud(m.salud)}</Text> : null}

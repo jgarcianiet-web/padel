@@ -162,3 +162,45 @@ export const upsertMatch = (matches: Match[], match: Match): Match[] =>
   [...matches.filter((m) => m.id !== match.id), match].sort((a, b) =>
     a.fecha < b.fecha ? -1 : 1
   );
+
+// ─── ficha de evolución de un golpe ───
+
+export interface PuntoGolpe {
+  fecha: string; // formateada para el eje
+  fechaISO: string;
+  nota: number; // de golpesSesion (capturas de la Band)
+  cantidad: number | null; // de golpesVolumen si existe ese día
+}
+
+export interface EvolucionGolpe {
+  puntos: PuntoGolpe[];
+  veces: number;
+  media: number | null;
+  mejor: number | null;
+  peor: number | null;
+}
+
+// Trayectoria de un golpe a través de las sesiones capturadas de Padel Band.
+export const calcEvolucionGolpe = (matches: Match[], nombre: string): EvolucionGolpe => {
+  const clave = nombre.toLowerCase();
+  const puntos: PuntoGolpe[] = [];
+  matches.forEach((m) => {
+    const golpe = (m.golpesSesion ?? []).find((g) => g.nombre.toLowerCase() === clave);
+    if (!golpe) return;
+    const volumen = (m.golpesVolumen ?? []).find((g) => g.nombre.toLowerCase() === clave);
+    puntos.push({
+      fecha: fmtFecha(m.fecha),
+      fechaISO: m.fecha,
+      nota: golpe.nota,
+      cantidad: volumen ? volumen.cantidad : null,
+    });
+  });
+  const notas = puntos.map((p) => p.nota);
+  return {
+    puntos,
+    veces: puntos.length,
+    media: notas.length ? notas.reduce((a, n) => a + n, 0) / notas.length : null,
+    mejor: notas.length ? Math.max(...notas) : null,
+    peor: notas.length ? Math.min(...notas) : null,
+  };
+};

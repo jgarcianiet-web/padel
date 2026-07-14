@@ -1,5 +1,5 @@
 import { GOLPES } from '../constants/catalogos';
-import { CapturaBand, GolpeSesion } from '../types/domain';
+import { CapturaBand, GolpeSesion, GolpeVolumen } from '../types/domain';
 
 // Campos del formulario de partido que pueden rellenar las capturas de
 // Padel Band. Cada tipo de captura toca SOLO sus campos, de modo que subir
@@ -16,6 +16,9 @@ export interface PatchCaptura {
   bandInicio?: string;
   bandFin?: string;
   bandMediaJugador?: string;
+  // pantalla de volumen de golpeo
+  golpesVolumen?: GolpeVolumen[];
+  totalGolpes?: number;
 }
 
 const aLista = (n: string): string =>
@@ -51,6 +54,18 @@ export function aplicarCaptura(captura: CapturaBand): PatchCaptura {
     if (captura.mediaJugador != null) patch.bandMediaJugador = String(captura.mediaJugador);
     return patch;
   }
+  if (captura.tipo === 'volumen') {
+    const patch: PatchCaptura = {};
+    if (captura.golpes.length > 0) {
+      patch.golpesVolumen = captura.golpes.map((g) => ({ ...g, nombre: aLista(g.nombre) }));
+    }
+    const total =
+      captura.total ?? (captura.golpes.length > 0
+        ? captura.golpes.reduce((a, g) => a + g.cantidad, 0)
+        : null);
+    if (total != null) patch.totalGolpes = total;
+    return patch;
+  }
   return {};
 }
 
@@ -67,6 +82,17 @@ export function parseCapturaBand(texto: string): CapturaBand {
       inicio: typeof parsed.inicio === 'number' ? parsed.inicio : null,
       fin: typeof parsed.fin === 'number' ? parsed.fin : null,
       mediaJugador: typeof parsed.mediaJugador === 'number' ? parsed.mediaJugador : null,
+    };
+  }
+  if (parsed.tipo === 'volumen') {
+    const golpes: GolpeVolumen[] = (parsed.golpes || []).filter(
+      (g: { nombre?: string; cantidad?: unknown }) =>
+        g.nombre && typeof g.cantidad === 'number' && g.cantidad >= 0
+    );
+    return {
+      tipo: 'volumen',
+      total: typeof parsed.total === 'number' ? parsed.total : null,
+      golpes,
     };
   }
   // retro-compatible: si el modelo no etiqueta el tipo pero devuelve golpes

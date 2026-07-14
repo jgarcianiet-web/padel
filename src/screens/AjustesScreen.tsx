@@ -408,7 +408,7 @@ export default function AjustesScreen() {
               <Text style={styles.ayuda}>{MSG_SIN_HEALTH}</Text>
             )}
             <Text style={styles.diagnostico}>
-              JS v1.0.1 · update{' '}
+              JS v1.0.2 · update{' '}
               {Updates.updateId ? Updates.updateId.slice(0, 8) : 'embebida (sin OTA)'} ·{' '}
               {healthDiagnostico()}
             </Text>

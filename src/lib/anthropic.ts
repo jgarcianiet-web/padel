@@ -157,6 +157,8 @@ ${JSON.stringify(datos, null, 2)}
 
 Antes de responder, calcula mentalmente: % de cumplimiento de cada objetivo, rendimiento por posición (victorias y bien jugados en revés vs derecha), rendimiento competitivo vs amistoso, rendimiento con cada compañero si hay datos, ritmo hacia la meta de nivel si está definida, evolución del Playtomic desde el inicial, media del Band por sesión y su tendencia, golpes que más se repiten como peor golpe y su puntuación media, y patrones en los sets (¿pierde terceros sets?, ¿arranca frío el primero?).
 
+ANÁLISIS FÍSICO (dale peso cuando haya datos de salud): calcula también el pulso medio en victorias vs derrotas, el nivel Band en partidos de pulso alto vs bajo (usa la mediana de sus pulsos como corte), el rendimiento en partidos largos (por encima de su duración media) vs cortos, y la fatiga dentro de la sesión (curva de la Band que acaba por debajo de su inicio, sobre todo si coincide con pulso o duración altos, o con volumen de golpeo alto). Si 3 o más partidos tienen datos de salud, uno de los "patrones" debe ser físico con sus números (ej: 'En tus 3 partidos con pulso medio >140 tu Band cae a 3,1 frente a 3,8 cuando vas más bajo'), y si detectas un patrón físico claro, al menos una acción del "plan" debe atacarlo (gestión de esfuerzo, ritmo de puntos, físico específico de pádel). Si hay menos de 3 partidos con salud, dilo y no fuerces conclusiones físicas.
+
 Responde SOLO con un objeto JSON válido, sin Markdown ni texto fuera del JSON, con esta estructura exacta:
 {
   "lectura": "párrafo de 60-90 palabras con la lectura general de la temporada, citando números concretos (niveles, porcentajes, rachas)",

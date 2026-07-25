@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { crearClub, listarClubes } from '../api/consultas';
 import { Aviso, Boton, Cabecera, Cargando, Campo, Card, Chip, Vacio } from '../components/base';
+import { avisar } from '../components/Dialogo';
+import { Pantalla } from '../components/Pantalla';
 import { useCarga } from '../lib/useCarga';
 import { useUid } from '../store/sesion';
 import { T } from '../theme/colors';
@@ -27,78 +28,74 @@ export function ClubesScreen() {
   const conIndividual = (datos ?? []).filter((c) => c.pistasIndividuales > 0).length;
 
   return (
-    <SafeAreaView style={S.pantalla} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={S.contenido}
-        refreshControl={<RefreshControl refreshing={cargando} onRefresh={recargar} />}>
-        <Cabecera
-          titulo="Clubes"
-          subtitulo={`${datos?.length ?? 0} clubes · ${conIndividual} con pista individual`}
+    <Pantalla refrescando={cargando} onRefrescar={recargar}>
+      <Cabecera
+        titulo="Clubes"
+        subtitulo={`${datos?.length ?? 0} clubes · ${conIndividual} con pista individual`}
+      />
+
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+        <Chip
+          texto="Todos"
+          activo={!soloIndividual}
+          onPress={() => setSoloIndividual(false)}
         />
+        <Chip
+          texto="Con pista individual"
+          activo={soloIndividual}
+          onPress={() => setSoloIndividual(true)}
+        />
+      </View>
 
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-          <Chip
-            texto="Todos"
-            activo={!soloIndividual}
-            onPress={() => setSoloIndividual(false)}
-          />
-          <Chip
-            texto="Con pista individual"
-            activo={soloIndividual}
-            onPress={() => setSoloIndividual(true)}
-          />
-        </View>
+      {cargando && !datos ? <Cargando /> : null}
 
-        {cargando && !datos ? <Cargando /> : null}
-
-        {lista.map((c) => (
-          <Card key={c.id}>
-            <View style={S.filaEntre}>
-              <Text style={e.nombre} numberOfLines={1}>
-                {c.nombre}
-              </Text>
-              {c.pistasIndividuales > 0 ? (
-                <Chip texto={`${c.pistasIndividuales} individual`} tono="verde" />
-              ) : null}
-            </View>
-            <Text style={S.textoSuave}>
-              {[c.ciudad, c.direccion].filter(Boolean).join(' · ')}
+      {lista.map((c) => (
+        <Card key={c.id}>
+          <View style={S.filaEntre}>
+            <Text style={e.nombre} numberOfLines={1}>
+              {c.nombre}
             </Text>
-            <Text style={[S.textoSuave, { marginTop: 6 }]}>
-              {c.pistasDobles} pistas de dobles
-              {c.indoor === true ? ' · indoor' : c.indoor === false ? ' · exterior' : ''}
-              {c.telefono ? ` · ${c.telefono}` : ''}
-            </Text>
-            {c.notas ? (
-              <Text style={[S.textoSuave, { marginTop: 6, fontStyle: 'italic' }]}>{c.notas}</Text>
+            {c.pistasIndividuales > 0 ? (
+              <Chip texto={`${c.pistasIndividuales} individual`} tono="verde" />
             ) : null}
-          </Card>
-        ))}
+          </View>
+          <Text style={S.textoSuave}>
+            {[c.ciudad, c.direccion].filter(Boolean).join(' · ')}
+          </Text>
+          <Text style={[S.textoSuave, { marginTop: 6 }]}>
+            {c.pistasDobles} pistas de dobles
+            {c.indoor === true ? ' · indoor' : c.indoor === false ? ' · exterior' : ''}
+            {c.telefono ? ` · ${c.telefono}` : ''}
+          </Text>
+          {c.notas ? (
+            <Text style={[S.textoSuave, { marginTop: 6, fontStyle: 'italic' }]}>{c.notas}</Text>
+          ) : null}
+        </Card>
+      ))}
 
-        {datos && lista.length === 0 ? (
-          <Vacio
-            texto={
-              soloIndividual
-                ? 'Ningún club del directorio tiene pista individual todavía. Añade el tuyo si sabes de alguno.'
-                : 'El directorio está vacío. Añade el primer club.'
-            }
-          />
-        ) : null}
+      {datos && lista.length === 0 ? (
+        <Vacio
+          texto={
+            soloIndividual
+              ? 'Ningún club del directorio tiene pista individual todavía. Añade el tuyo si sabes de alguno.'
+              : 'El directorio está vacío. Añade el primer club.'
+          }
+        />
+      ) : null}
 
-        {alta ? (
-          <FormularioClub
-            onCancelar={() => setAlta(false)}
-            onCreado={() => {
-              setAlta(false);
-              recargar();
-            }}
-            uid={uid}
-          />
-        ) : (
-          <Boton titulo="Añadir club" variante="secundario" onPress={() => setAlta(true)} />
-        )}
-      </ScrollView>
-    </SafeAreaView>
+      {alta ? (
+        <FormularioClub
+          onCancelar={() => setAlta(false)}
+          onCreado={() => {
+            setAlta(false);
+            recargar();
+          }}
+          uid={uid}
+        />
+      ) : (
+        <Boton titulo="Añadir club" variante="secundario" onPress={() => setAlta(true)} />
+      )}
+    </Pantalla>
   );
 }
 
@@ -134,7 +131,7 @@ function FormularioClub({
         },
         uid
       );
-      Alert.alert('Club añadido', 'Ya aparece en el directorio.');
+      avisar('Club añadido', 'Ya aparece en el directorio.');
       onCreado();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se ha podido guardar');

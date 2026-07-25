@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   abrirPartidoDeReto,
@@ -19,8 +18,10 @@ import {
   sembrarEscalera,
 } from '../api/consultas';
 import { Aviso, Boton, Cargando, Card, Chip, Vacio } from '../components/base';
+import { avisar, confirmar } from '../components/Dialogo';
 import { Cuadro } from '../components/Cuadro';
 import { Escalones, EscalonVista } from '../components/Escalones';
+import { Pantalla } from '../components/Pantalla';
 import { TablaClasificacion } from '../components/TablaClasificacion';
 import { TarjetaPartido } from '../components/TarjetaPartido';
 import { tituloTipo } from '../constants/reglas';
@@ -73,11 +74,9 @@ export function CompeticionScreen({ id }: { id: string }) {
   if (cargando && !datos) return <Cargando texto="Cargando la competición…" />;
   if (!datos)
     return (
-      <SafeAreaView style={S.pantalla}>
-        <View style={S.contenido}>
-          <Aviso texto={error ?? 'No se ha podido cargar la competición.'} />
-        </View>
-      </SafeAreaView>
+      <Pantalla>
+        <Aviso texto={error ?? 'No se ha podido cargar la competición.'} />
+      </Pantalla>
     );
 
   const { competicion, inscripciones, parejas, partidos, puestos, retos } = datos;
@@ -88,144 +87,140 @@ export function CompeticionScreen({ id }: { id: string }) {
   const esTorneo = competicion.tipo === 'torneo_parejas';
 
   return (
-    <SafeAreaView style={S.pantalla} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={S.contenido}
-        refreshControl={<RefreshControl refreshing={cargando} onRefresh={recargar} />}>
-        <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-          <Text style={e.volver}>‹ Volver</Text>
-        </Pressable>
+    <Pantalla refrescando={cargando} onRefrescar={recargar} amplia={esTorneo}>
+      <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
+        <Text style={e.volver}>‹ Volver</Text>
+      </Pressable>
 
-        <Text style={S.titulo}>{competicion.nombre}</Text>
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-          <Chip texto={tituloTipo(competicion.tipo)} tono="pista" />
-          {competicion.temporada ? <Chip texto={competicion.temporada} /> : null}
-          <Chip
-            texto={
-              competicion.estado === 'inscripcion'
-                ? 'Inscripción abierta'
-                : competicion.estado === 'en_curso'
-                  ? 'En juego'
-                  : competicion.estado === 'finalizada'
-                    ? 'Finalizada'
-                    : 'Borrador'
-            }
-            tono={competicion.estado === 'inscripcion' ? 'verde' : 'neutro'}
+      <Text style={S.titulo}>{competicion.nombre}</Text>
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+        <Chip texto={tituloTipo(competicion.tipo)} tono="pista" />
+        {competicion.temporada ? <Chip texto={competicion.temporada} /> : null}
+        <Chip
+          texto={
+            competicion.estado === 'inscripcion'
+              ? 'Inscripción abierta'
+              : competicion.estado === 'en_curso'
+                ? 'En juego'
+                : competicion.estado === 'finalizada'
+                  ? 'Finalizada'
+                  : 'Borrador'
+          }
+          tono={competicion.estado === 'inscripcion' ? 'verde' : 'neutro'}
+        />
+      </View>
+      {competicion.descripcion ? (
+        <Text style={[S.textoSuave, { marginTop: 10 }]}>{competicion.descripcion}</Text>
+      ) : null}
+      <Text style={[S.textoSuave, { marginTop: 6 }]}>
+        Organiza {nombreDe(competicion.organizadorId)} · {inscripciones.length} inscritos
+      </Text>
+
+      {error ? <View style={{ marginTop: 12 }}><Aviso texto={error} /></View> : null}
+
+      {competicion.estado === 'inscripcion' && uid ? (
+        miInscripcion ? (
+          <Boton
+            titulo="Darme de baja"
+            variante="secundario"
+            cargando={trabajando}
+            onPress={() => conAviso(() => borrarseDe(competicion.id, uid))}
           />
-        </View>
-        {competicion.descripcion ? (
-          <Text style={[S.textoSuave, { marginTop: 10 }]}>{competicion.descripcion}</Text>
-        ) : null}
-        <Text style={[S.textoSuave, { marginTop: 6 }]}>
-          Organiza {nombreDe(competicion.organizadorId)} · {inscripciones.length} inscritos
-        </Text>
+        ) : (
+          <Boton
+            titulo="Apuntarme"
+            cargando={trabajando}
+            onPress={() => conAviso(() => inscribirse(competicion.id, uid))}
+          />
+        )
+      ) : null}
 
-        {error ? <View style={{ marginTop: 12 }}><Aviso texto={error} /></View> : null}
+      {soyOrganizador ? (
+        <PanelOrganizador
+          datos={datos}
+          trabajando={trabajando}
+          onAccion={conAviso}
+          nombreDe={nombreDe}
+        />
+      ) : null}
 
-        {competicion.estado === 'inscripcion' && uid ? (
-          miInscripcion ? (
-            <Boton
-              titulo="Darme de baja"
-              variante="secundario"
-              cargando={trabajando}
-              onPress={() => conAviso(() => borrarseDe(competicion.id, uid))}
-            />
-          ) : (
-            <Boton
-              titulo="Apuntarme"
-              cargando={trabajando}
-              onPress={() => conAviso(() => inscribirse(competicion.id, uid))}
-            />
-          )
-        ) : null}
+      <View style={e.pestanas}>
+        {(
+          [
+            ['principal', esTorneo ? 'Cuadro' : competicion.tipo === 'escalera' ? 'Escalera' : 'Clasificación'],
+            ['partidos', 'Partidos'],
+            ['jugadores', esTorneo ? 'Parejas' : 'Jugadores'],
+            ['reglamento', 'Reglamento'],
+          ] as [Pestana, string][]
+        ).map(([clave, texto]) => (
+          <Pressable key={clave} onPress={() => setPestana(clave)} style={e.pestana}>
+            <Text style={[e.pestanaTexto, pestana === clave && e.pestanaActiva]}>{texto}</Text>
+            {pestana === clave ? <View style={e.subrayado} /> : null}
+          </Pressable>
+        ))}
+      </View>
 
-        {soyOrganizador ? (
-          <PanelOrganizador
+      {pestana === 'principal' ? (
+        competicion.tipo === 'escalera' ? (
+          <VistaEscalera
             datos={datos}
+            uid={uid}
             trabajando={trabajando}
             onAccion={conAviso}
             nombreDe={nombreDe}
           />
-        ) : null}
-
-        <View style={e.pestanas}>
-          {(
-            [
-              ['principal', esTorneo ? 'Cuadro' : competicion.tipo === 'escalera' ? 'Escalera' : 'Clasificación'],
-              ['partidos', 'Partidos'],
-              ['jugadores', esTorneo ? 'Parejas' : 'Jugadores'],
-              ['reglamento', 'Reglamento'],
-            ] as [Pestana, string][]
-          ).map(([clave, texto]) => (
-            <Pressable key={clave} onPress={() => setPestana(clave)} style={e.pestana}>
-              <Text style={[e.pestanaTexto, pestana === clave && e.pestanaActiva]}>{texto}</Text>
-              {pestana === clave ? <View style={e.subrayado} /> : null}
-            </Pressable>
-          ))}
-        </View>
-
-        {pestana === 'principal' ? (
-          competicion.tipo === 'escalera' ? (
-            <VistaEscalera
-              datos={datos}
-              uid={uid}
-              trabajando={trabajando}
-              onAccion={conAviso}
+        ) : esTorneo ? (
+          <VistaTorneo datos={datos} nombrePareja={nombrePareja} />
+        ) : (
+          <Card>
+            <TablaClasificacion
+              filas={calcularClasificacion(partidos, {
+                puntosVictoria: reglas.puntosVictoria,
+                puntosDerrota: reglas.puntosDerrota,
+                participantes: jugadores,
+              })}
               nombreDe={nombreDe}
+              destacado={uid}
+              sube={'sube' in reglas ? reglas.sube : 0}
+              baja={'baja' in reglas ? reglas.baja : 0}
             />
-          ) : esTorneo ? (
-            <VistaTorneo datos={datos} nombrePareja={nombrePareja} />
-          ) : (
-            <Card>
-              <TablaClasificacion
-                filas={calcularClasificacion(partidos, {
-                  puntosVictoria: reglas.puntosVictoria,
-                  puntosDerrota: reglas.puntosDerrota,
-                  participantes: jugadores,
-                })}
-                nombreDe={nombreDe}
-                destacado={uid}
-                sube={'sube' in reglas ? reglas.sube : 0}
-                baja={'baja' in reglas ? reglas.baja : 0}
-              />
-            </Card>
-          )
-        ) : null}
+          </Card>
+        )
+      ) : null}
 
-        {pestana === 'partidos' ? (
-          partidos.length === 0 ? (
-            <Vacio texto="Todavía no hay partidos. El organizador genera el calendario al cerrar las inscripciones." />
-          ) : (
-            partidos.map((p) => (
-              <TarjetaPartido
-                key={p.id}
-                partido={p}
-                nombreDe={nombreDe}
-                uid={uid}
-                etiquetaEquipo={(partido, lado) =>
-                  nombrePareja(lado === 'a' ? p.parejaA : p.parejaB) ?? null
-                }
-                onPress={() => router.push(`/partido?id=${p.id}`)}
-              />
-            ))
-          )
-        ) : null}
+      {pestana === 'partidos' ? (
+        partidos.length === 0 ? (
+          <Vacio texto="Todavía no hay partidos. El organizador genera el calendario al cerrar las inscripciones." />
+        ) : (
+          partidos.map((p) => (
+            <TarjetaPartido
+              key={p.id}
+              partido={p}
+              nombreDe={nombreDe}
+              uid={uid}
+              etiquetaEquipo={(partido, lado) =>
+                nombrePareja(lado === 'a' ? p.parejaA : p.parejaB) ?? null
+              }
+              onPress={() => router.push(`/partido?id=${p.id}`)}
+            />
+          ))
+        )
+      ) : null}
 
-        {pestana === 'jugadores' ? (
-          <VistaJugadores
-            datos={datos}
-            soyOrganizador={soyOrganizador}
-            trabajando={trabajando}
-            onAccion={conAviso}
-            nombreDe={nombreDe}
-          />
-        ) : null}
+      {pestana === 'jugadores' ? (
+        <VistaJugadores
+          datos={datos}
+          soyOrganizador={soyOrganizador}
+          trabajando={trabajando}
+          onAccion={conAviso}
+          nombreDe={nombreDe}
+        />
+      ) : null}
 
-        {pestana === 'reglamento' ? (
-          <Reglamento competicion={competicion} clubNombre={null} />
-        ) : null}
-      </ScrollView>
-    </SafeAreaView>
+      {pestana === 'reglamento' ? (
+        <Reglamento competicion={competicion} clubNombre={null} />
+      ) : null}
+    </Pantalla>
   );
 }
 
@@ -314,20 +309,15 @@ function VistaEscalera({
           escalones={vista}
           uid={uid}
           onRetar={(jugadorId) =>
-            Alert.alert(
-              'Lanzar reto',
-              `¿Retar a ${nombreDe(jugadorId)}?`,
-              [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                  text: 'Retar',
-                  onPress: () =>
-                    onAccion(async () => {
-                      await crearReto(datos.competicion.id, jugadorId);
-                    }),
-                },
-              ]
-            )
+            confirmar({
+              titulo: `¿Retar a ${nombreDe(jugadorId)}?`,
+              mensaje: `Tenéis ${reglas.diasParaJugar} días para jugarlo. Si ganas, te quedas su puesto.`,
+              textoAceptar: 'Retar',
+              onAceptar: () =>
+                onAccion(async () => {
+                  await crearReto(datos.competicion.id, jugadorId);
+                }),
+            })
           }
         />
       </Card>
@@ -527,7 +517,7 @@ function PanelOrganizador({
             reglas as ReglasLigaDivisiones
           );
           if (r.descansan.length)
-            Alert.alert(
+            avisar(
               'Jornada creada',
               `Descansan esta jornada: ${r.descansan.map(nombreDe).join(', ')}`
             );
@@ -557,7 +547,7 @@ function PanelOrganizador({
         reglas as ReglasLigaDivisiones
       );
       if (r.descansan.length)
-        Alert.alert(
+        avisar(
           `Jornada ${numero} creada`,
           `Descansan: ${r.descansan.map(nombreDe).join(', ')}`
         );

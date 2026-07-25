@@ -29,10 +29,24 @@ const config: ExpoConfig = {
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
   },
+  // La misma base sirve para iOS, Android y navegador. En web se exporta
+  // estático (una URL por pantalla, compartible por WhatsApp) y con los datos
+  // de manifiesto para que se pueda instalar como aplicación desde el propio
+  // navegador, también en móviles sin pasar por las tiendas.
   web: {
     bundler: 'metro',
     output: 'static',
     favicon: './assets/images/favicon.png',
+    name: 'Circuito Pádel',
+    shortName: 'Circuito',
+    lang: 'es',
+    description:
+      'Ligas de pádel por divisiones, escalera individual, torneos de parejas y liga individual.',
+    themeColor: '#1E56A8',
+    backgroundColor: '#F5F3EC',
+    display: 'standalone',
+    startUrl: '/',
+    orientation: 'portrait',
   },
   plugins: [
     'expo-router',

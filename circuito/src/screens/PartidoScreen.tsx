@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, Text, View } from 'react-native';
 
 import { cliente } from '../api/cliente';
 import { aPartido } from '../api/mapeo';
@@ -11,6 +10,7 @@ import {
   reportarResultado,
 } from '../api/consultas';
 import { Aviso, Boton, Cargando, Card, Chip } from '../components/base';
+import { Pantalla } from '../components/Pantalla';
 import { EditorMarcador } from '../components/EditorMarcador';
 import { fechaCorta } from '../lib/fecha';
 import { formatearSets, resumirSets } from '../lib/marcador';
@@ -81,91 +81,89 @@ export function PartidoScreen({ id }: { id: string }) {
   const resumen = resumirSets(partido.sets);
 
   return (
-    <SafeAreaView style={S.pantalla} edges={['top']}>
-      <ScrollView contentContainerStyle={S.contenido}>
-        <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-          <Text style={{ color: T.pista }}>‹ Volver</Text>
-        </Pressable>
+    <Pantalla>
+      <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
+        <Text style={{ color: T.pista }}>‹ Volver</Text>
+      </Pressable>
 
-        <Text style={S.titulo}>{competicion?.nombre ?? 'Partido'}</Text>
-        <Text style={[S.textoSuave, { marginBottom: 12 }]}>
-          {[partido.ronda, fechaCorta(partido.fecha)].filter(Boolean).join(' · ')}
-        </Text>
+      <Text style={S.titulo}>{competicion?.nombre ?? 'Partido'}</Text>
+      <Text style={[S.textoSuave, { marginBottom: 12 }]}>
+        {[partido.ronda, fechaCorta(partido.fecha)].filter(Boolean).join(' · ')}
+      </Text>
 
-        <Card>
-          <View style={S.filaEntre}>
-            <Text style={[S.subtitulo, { flex: 1 }]}>{etiqueta('a')}</Text>
-            <Text style={[S.textoSuave, { paddingHorizontal: 10 }]}>vs</Text>
-            <Text style={[S.subtitulo, { flex: 1, textAlign: 'right' }]}>{etiqueta('b')}</Text>
-          </View>
+      <Card>
+        <View style={S.filaEntre}>
+          <Text style={[S.subtitulo, { flex: 1 }]}>{etiqueta('a')}</Text>
+          <Text style={[S.textoSuave, { paddingHorizontal: 10 }]}>vs</Text>
+          <Text style={[S.subtitulo, { flex: 1, textAlign: 'right' }]}>{etiqueta('b')}</Text>
+        </View>
 
-          {partido.sets ? (
-            <View style={{ marginTop: 12, alignItems: 'center' }}>
-              <Text style={[S.titulo, { fontSize: 26 }]}>{formatearSets(partido.sets)}</Text>
-              <Text style={S.textoSuave}>
-                Gana {resumen.ganador === 'a' ? etiqueta('a') : etiqueta('b')}
-              </Text>
-            </View>
-          ) : null}
-
-          <View style={{ marginTop: 12, alignItems: 'flex-start' }}>
-            <Chip
-              texto={
-                partido.estado === 'confirmado'
-                  ? 'Resultado confirmado'
-                  : partido.estado === 'pendiente'
-                    ? 'Esperando confirmación del rival'
-                    : 'Por jugar'
-              }
-              tono={
-                partido.estado === 'confirmado'
-                  ? 'verde'
-                  : partido.estado === 'pendiente'
-                    ? 'ambar'
-                    : 'neutro'
-              }
-            />
-          </View>
-        </Card>
-
-        {error ? <Aviso texto={error} /> : null}
-
-        {puedoConfirmar ? (
-          <Card>
-            <Text style={S.texto}>
-              {nombreDe(partido.reportadoPor as string)} ha subido este resultado.
-              Confírmalo para que cuente en la clasificación.
+        {partido.sets ? (
+          <View style={{ marginTop: 12, alignItems: 'center' }}>
+            <Text style={[S.titulo, { fontSize: 26 }]}>{formatearSets(partido.sets)}</Text>
+            <Text style={S.textoSuave}>
+              Gana {resumen.ganador === 'a' ? etiqueta('a') : etiqueta('b')}
             </Text>
-            <Boton
-              titulo="Confirmar resultado"
-              cargando={trabajando}
-              onPress={() => accion(() => confirmarResultado(partido.id))}
-            />
-          </Card>
+          </View>
         ) : null}
 
-        {juego && partido.estado === 'programado' ? (
-          <Card>
-            <Text style={[S.label, { marginBottom: 12 }]}>Subir resultado</Text>
-            <EditorMarcador
-              etiquetaA={etiqueta('a')}
-              etiquetaB={etiqueta('b')}
-              setsParaGanar={setsParaGanar}
-              guardando={trabajando}
-              onGuardar={(sets: SetMarcador[], ganador) =>
-                accion(() => reportarResultado(partido.id, sets, ganador))
-              }
-            />
-          </Card>
-        ) : null}
-
-        {partido.estado === 'pendiente' && miLado === ladoQueReporto ? (
-          <Aviso
-            tono="ambar"
-            texto="Ya has subido el resultado. Falta que lo confirme el equipo rival."
+        <View style={{ marginTop: 12, alignItems: 'flex-start' }}>
+          <Chip
+            texto={
+              partido.estado === 'confirmado'
+                ? 'Resultado confirmado'
+                : partido.estado === 'pendiente'
+                  ? 'Esperando confirmación del rival'
+                  : 'Por jugar'
+            }
+            tono={
+              partido.estado === 'confirmado'
+                ? 'verde'
+                : partido.estado === 'pendiente'
+                  ? 'ambar'
+                  : 'neutro'
+            }
           />
-        ) : null}
-      </ScrollView>
-    </SafeAreaView>
+        </View>
+      </Card>
+
+      {error ? <Aviso texto={error} /> : null}
+
+      {puedoConfirmar ? (
+        <Card>
+          <Text style={S.texto}>
+            {nombreDe(partido.reportadoPor as string)} ha subido este resultado.
+            Confírmalo para que cuente en la clasificación.
+          </Text>
+          <Boton
+            titulo="Confirmar resultado"
+            cargando={trabajando}
+            onPress={() => accion(() => confirmarResultado(partido.id))}
+          />
+        </Card>
+      ) : null}
+
+      {juego && partido.estado === 'programado' ? (
+        <Card>
+          <Text style={[S.label, { marginBottom: 12 }]}>Subir resultado</Text>
+          <EditorMarcador
+            etiquetaA={etiqueta('a')}
+            etiquetaB={etiqueta('b')}
+            setsParaGanar={setsParaGanar}
+            guardando={trabajando}
+            onGuardar={(sets: SetMarcador[], ganador) =>
+              accion(() => reportarResultado(partido.id, sets, ganador))
+            }
+          />
+        </Card>
+      ) : null}
+
+      {partido.estado === 'pendiente' && miLado === ladoQueReporto ? (
+        <Aviso
+          tono="ambar"
+          texto="Ya has subido el resultado. Falta que lo confirme el equipo rival."
+        />
+      ) : null}
+    </Pantalla>
   );
 }

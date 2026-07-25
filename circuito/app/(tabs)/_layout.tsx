@@ -1,16 +1,25 @@
 import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 
+import { useDisposicion } from '@/src/lib/responsive';
 import { T } from '@/src/theme/colors';
 
 export default function TabLayout() {
+  const { esEscritorio } = useDisposicion();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        // En el móvil la navegación va abajo, al alcance del pulgar; en la
+        // ventana de un ordenador pasa a ser una barra lateral, que es donde
+        // la busca quien usa ratón.
+        tabBarPosition: esEscritorio ? 'left' : 'bottom',
         tabBarActiveTintColor: T.pista,
         tabBarInactiveTintColor: T.tintaSuave,
-        tabBarStyle: { backgroundColor: T.blanco, borderTopColor: T.borde },
+        tabBarStyle: esEscritorio
+          ? { backgroundColor: T.blanco, borderRightColor: T.borde, borderRightWidth: 1 }
+          : { backgroundColor: T.blanco, borderTopColor: T.borde },
         tabBarLabelStyle: {
           fontFamily: 'ChakraPetch_700Bold',
           fontSize: 11,

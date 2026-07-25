@@ -18,6 +18,24 @@ personal y guarda todo en el móvil.
 | **Torneo de parejas** | Pareja fija, fase de grupos opcional y cuadro eliminatorio con siembra estándar y byes para los cabezas de serie. |
 | **Liga individual** | Pádel 1 vs 1, todos contra todos. Solo se puede jugar en clubes con pista individual, que es justo lo que marca el directorio de clubes. |
 
+## Móvil y web, la misma app
+
+Un único código para iOS, Android y navegador:
+
+- **Web**: se exporta estática (`output: 'static'`), así que cada pantalla tiene
+  su URL y el enlace de una competición se puede pegar en el grupo de WhatsApp.
+  Desde el navegador se puede hacer todo: apuntarse, subir resultados, retar.
+- **Instalable**: el manifiesto (`web` en `app.config.ts`) permite añadirla a la
+  pantalla de inicio desde el propio navegador, en escritorio y en móvil, sin
+  pasar por las tiendas.
+- **Se adapta al sitio**: la navegación va abajo en el móvil y pasa a barra
+  lateral a partir de 900 px; el contenido se centra en una columna legible en
+  lugar de estirarse de lado a lado del monitor (`src/lib/responsive.ts`).
+- **Nada de `Alert`**: `Alert.alert` es una función vacía en react-native-web
+  —en el navegador no pasaría nada al confirmar un reto—, así que las
+  confirmaciones usan un diálogo propio (`src/components/Dialogo.tsx`) que
+  funciona igual en las tres plataformas.
+
 ## Reglas comunes
 
 - Ningún partido acaba en empate: todos tienen ganador.

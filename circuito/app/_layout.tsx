@@ -14,6 +14,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { Dialogo } from '@/src/components/Dialogo';
 import { EntrarScreen } from '@/src/screens/EntrarScreen';
 import { useSesion } from '@/src/store/sesion';
 
@@ -55,6 +56,7 @@ export default function RootLayout() {
       <>
         <StatusBar style="dark" />
         <EntrarScreen />
+        <Dialogo />
       </>
     );
   }
@@ -68,6 +70,7 @@ export default function RootLayout() {
         <Stack.Screen name="crear" />
         <Stack.Screen name="partido" />
       </Stack>
+      <Dialogo />
     </>
   );
 }

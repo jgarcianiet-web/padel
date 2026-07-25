@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { supabase } from '../api/cliente';
+import { cliente } from '../api/cliente';
 import { aPartido } from '../api/mapeo';
 import {
   confirmarResultado,
@@ -26,10 +26,10 @@ export function PartidoScreen({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const { datos, cargando, recargar } = useCarga(async () => {
-    const partido = await supabase.from('partidos').select('*').eq('id', id).single();
+    const partido = await cliente().from('partidos').select('*').eq('id', id).single();
     if (partido.error) throw new Error(partido.error.message);
     const p = aPartido(partido.data);
-    const comp = await supabase
+    const comp = await cliente()
       .from('competiciones')
       .select('nombre, reglas, tipo')
       .eq('id', p.competicionId)

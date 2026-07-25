@@ -1,7 +1,7 @@
 import { Session } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
-import { hayBackend, supabase } from '../api/cliente';
+import { cliente, hayBackend } from '../api/cliente';
 import { guardarPerfil, miPerfil } from '../api/consultas';
 import { Perfil } from '../types/domain';
 
@@ -27,12 +27,12 @@ export const useSesion = create<SesionStore>((set, get) => ({
       return () => {};
     }
 
-    supabase.auth.getSession().then(({ data }) => {
+    cliente().auth.getSession().then(({ data }) => {
       set({ sesion: data.session, listo: true });
       if (data.session) get().refrescarPerfil();
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_evento, sesion) => {
+    const { data } = cliente().auth.onAuthStateChange((_evento, sesion) => {
       set({ sesion, listo: true, perfil: sesion ? get().perfil : null });
       if (sesion) get().refrescarPerfil();
     });
@@ -59,7 +59,7 @@ export const useSesion = create<SesionStore>((set, get) => ({
   },
 
   salir: async () => {
-    await supabase.auth.signOut();
+    await cliente().auth.signOut();
     set({ sesion: null, perfil: null });
   },
 }));

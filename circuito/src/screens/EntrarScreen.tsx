@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { hayBackend, supabase } from '../api/cliente';
+import { cliente, hayBackend } from '../api/cliente';
 import { Aviso, Boton, Campo, Card } from '../components/base';
 import { S } from '../theme/styles';
 
@@ -22,7 +22,7 @@ export function EntrarScreen() {
   const pedirCodigo = async () => {
     setCargando(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await cliente().auth.signInWithOtp({
       email: correo.trim().toLowerCase(),
       options: { shouldCreateUser: true },
     });
@@ -34,7 +34,7 @@ export function EntrarScreen() {
   const entrar = async () => {
     setCargando(true);
     setError(null);
-    const { error } = await supabase.auth.verifyOtp({
+    const { error } = await cliente().auth.verifyOtp({
       email: correo.trim().toLowerCase(),
       token: codigo.trim(),
       type: 'email',

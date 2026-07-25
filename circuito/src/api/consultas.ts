@@ -18,7 +18,7 @@ import {
   SetMarcador,
   TipoCompeticion,
 } from '../types/domain';
-import { supabase } from './cliente';
+import { cliente } from './cliente';
 import {
   aClub,
   aCompeticion,
@@ -42,7 +42,7 @@ const revienta = (error: { message: string } | null) => {
 // ─── Perfil ────────────────────────────────────────────────────────────────
 
 export async function miPerfil(id: string): Promise<Perfil | null> {
-  const { data, error } = await supabase
+  const { data, error } = await cliente()
     .from('perfiles')
     .select('*')
     .eq('id', id)
@@ -52,7 +52,7 @@ export async function miPerfil(id: string): Promise<Perfil | null> {
 }
 
 export async function guardarPerfil(id: string, cambios: Partial<Perfil>) {
-  const { error } = await supabase
+  const { error } = await cliente()
     .from('perfiles')
     .update(dePerfil(cambios))
     .eq('id', id);
@@ -62,7 +62,7 @@ export async function guardarPerfil(id: string, cambios: Partial<Perfil>) {
 export async function perfilesPorId(ids: string[]): Promise<Record<string, Perfil>> {
   const unicos = [...new Set(ids)].filter(Boolean);
   if (unicos.length === 0) return {};
-  const { data, error } = await supabase.from('perfiles').select('*').in('id', unicos);
+  const { data, error } = await cliente().from('perfiles').select('*').in('id', unicos);
   revienta(error);
   return Object.fromEntries((data ?? []).map((f) => [f.id, aPerfil(f)]));
 }
@@ -73,7 +73,7 @@ export async function listarClubes(opciones?: {
   ciudad?: string;
   soloIndividual?: boolean;
 }): Promise<Club[]> {
-  let q = supabase.from('clubes').select('*').order('nombre');
+  let q = cliente().from('clubes').select('*').order('nombre');
   if (opciones?.ciudad) q = q.eq('ciudad', opciones.ciudad);
   if (opciones?.soloIndividual) q = q.gt('pistas_individuales', 0);
   const { data, error } = await q;
@@ -82,7 +82,7 @@ export async function listarClubes(opciones?: {
 }
 
 export async function crearClub(club: Partial<Club>, creadoPor: string): Promise<Club> {
-  const { data, error } = await supabase
+  const { data, error } = await cliente()
     .from('clubes')
     .insert(deClub({ ...club, creadoPor }))
     .select()
@@ -98,7 +98,7 @@ export async function listarCompeticiones(filtros?: {
   ciudad?: string;
   abiertas?: boolean;
 }): Promise<Competicion[]> {
-  let q = supabase.from('competiciones').select('*').order('creada_en', { ascending: false });
+  let q = cliente().from('competiciones').select('*').order('creada_en', { ascending: false });
   if (filtros?.tipo) q = q.eq('tipo', filtros.tipo);
   if (filtros?.ciudad) q = q.eq('ciudad', filtros.ciudad);
   if (filtros?.abiertas) q = q.in('estado', ['inscripcion', 'en_curso']);
@@ -110,8 +110,8 @@ export async function listarCompeticiones(filtros?: {
 /** Competiciones en las que juego o que organizo. */
 export async function misCompeticiones(uid: string): Promise<Competicion[]> {
   const [inscritas, organizadas] = await Promise.all([
-    supabase.from('inscripciones').select('competicion_id').eq('jugador_id', uid),
-    supabase.from('competiciones').select('*').eq('organizador_id', uid),
+    cliente().from('inscripciones').select('competicion_id').eq('jugador_id', uid),
+    cliente().from('competiciones').select('*').eq('organizador_id', uid),
   ]);
   revienta(inscritas.error);
   revienta(organizadas.error);
@@ -121,7 +121,7 @@ export async function misCompeticiones(uid: string): Promise<Competicion[]> {
   const faltan = ids.filter((id) => !propias.some((c) => c.id === id));
   if (faltan.length === 0) return propias;
 
-  const { data, error } = await supabase.from('competiciones').select('*').in('id', faltan);
+  const { data, error } = await cliente().from('competiciones').select('*').in('id', faltan);
   revienta(error);
   return [...propias, ...(data ?? []).map(aCompeticion)].sort((a, b) =>
     b.creadaEn.localeCompare(a.creadaEn)
@@ -140,7 +140,7 @@ export async function crearCompeticion(datos: {
   reglas: Reglas;
   organizadorId: string;
 }): Promise<Competicion> {
-  const { data, error } = await supabase
+  const { data, error } = await cliente()
     .from('competiciones')
     .insert(deCompeticion({ ...datos, estado: 'inscripcion' }))
     .select()
@@ -153,7 +153,7 @@ export async function cambiarEstado(
   competicionId: string,
   estado: Competicion['estado']
 ) {
-  const { error } = await supabase
+  const { error } = await cliente()
     .from('competiciones')
     .update({ estado })
     .eq('id', competicionId);
@@ -175,19 +175,19 @@ export interface DatosCompeticion {
 }
 
 export async function cargarCompeticion(id: string): Promise<DatosCompeticion> {
-  const cab = await supabase.from('competiciones').select('*').eq('id', id).single();
+  const cab = await cliente().from('competiciones').select('*').eq('id', id).single();
   revienta(cab.error);
   const competicion = aCompeticion(cab.data);
 
   const [divisiones, jornadas, inscripciones, parejas, partidos, puestos, retos] =
     await Promise.all([
-      supabase.from('divisiones').select('*').eq('competicion_id', id).order('orden'),
-      supabase.from('jornadas').select('*').eq('competicion_id', id).order('numero'),
-      supabase.from('inscripciones').select('*').eq('competicion_id', id),
-      supabase.from('parejas').select('*').eq('competicion_id', id),
-      supabase.from('partidos').select('*').eq('competicion_id', id).order('orden'),
-      supabase.from('escalera_puestos').select('*').eq('competicion_id', id).order('posicion'),
-      supabase.from('retos').select('*').eq('competicion_id', id).order('creado_en'),
+      cliente().from('divisiones').select('*').eq('competicion_id', id).order('orden'),
+      cliente().from('jornadas').select('*').eq('competicion_id', id).order('numero'),
+      cliente().from('inscripciones').select('*').eq('competicion_id', id),
+      cliente().from('parejas').select('*').eq('competicion_id', id),
+      cliente().from('partidos').select('*').eq('competicion_id', id).order('orden'),
+      cliente().from('escalera_puestos').select('*').eq('competicion_id', id).order('posicion'),
+      cliente().from('retos').select('*').eq('competicion_id', id).order('creado_en'),
     ]);
 
   for (const r of [divisiones, jornadas, inscripciones, parejas, partidos, puestos, retos])
@@ -215,14 +215,14 @@ export async function cargarCompeticion(id: string): Promise<DatosCompeticion> {
 // ─── Inscripciones ─────────────────────────────────────────────────────────
 
 export async function inscribirse(competicionId: string, jugadorId: string) {
-  const { error } = await supabase
+  const { error } = await cliente()
     .from('inscripciones')
     .insert({ competicion_id: competicionId, jugador_id: jugadorId });
   revienta(error);
 }
 
 export async function borrarseDe(competicionId: string, jugadorId: string) {
-  const { error } = await supabase
+  const { error } = await cliente()
     .from('inscripciones')
     .delete()
     .eq('competicion_id', competicionId)
@@ -231,7 +231,7 @@ export async function borrarseDe(competicionId: string, jugadorId: string) {
 }
 
 export async function asignarDivision(inscripcionId: string, divisionId: string | null) {
-  const { error } = await supabase
+  const { error } = await cliente()
     .from('inscripciones')
     .update({ division_id: divisionId })
     .eq('id', inscripcionId);
@@ -239,7 +239,7 @@ export async function asignarDivision(inscripcionId: string, divisionId: string 
 }
 
 export async function crearDivisiones(competicionId: string, nombres: string[]) {
-  const { error } = await supabase.from('divisiones').insert(
+  const { error } = await cliente().from('divisiones').insert(
     nombres.map((nombre, i) => ({
       competicion_id: competicionId,
       nombre,
@@ -255,7 +255,7 @@ export async function crearPareja(
   jugadorB: string,
   nombre?: string | null
 ): Promise<Pareja> {
-  const { data, error } = await supabase
+  const { data, error } = await cliente()
     .from('parejas')
     .insert({
       competicion_id: competicionId,
@@ -276,7 +276,7 @@ export async function reportarResultado(
   sets: SetMarcador[],
   ganador: Lado
 ) {
-  const { error } = await supabase.rpc('reportar_resultado', {
+  const { error } = await cliente().rpc('reportar_resultado', {
     p_partido: partidoId,
     p_sets: sets,
     p_ganador: ganador,
@@ -285,12 +285,12 @@ export async function reportarResultado(
 }
 
 export async function confirmarResultado(partidoId: string) {
-  const { error } = await supabase.rpc('confirmar_resultado', { p_partido: partidoId });
+  const { error } = await cliente().rpc('confirmar_resultado', { p_partido: partidoId });
   revienta(error);
 }
 
 export async function partidosDe(jugadorId: string): Promise<Partido[]> {
-  const { data, error } = await supabase
+  const { data, error } = await cliente()
     .from('partidos')
     .select('*')
     .or(`equipo_a.cs.{${jugadorId}},equipo_b.cs.{${jugadorId}}`)
@@ -302,7 +302,7 @@ export async function partidosDe(jugadorId: string): Promise<Partido[]> {
 // ─── Escalera ──────────────────────────────────────────────────────────────
 
 export async function sembrarEscalera(competicionId: string, jugadorIds: string[]) {
-  const { error } = await supabase.from('escalera_puestos').upsert(
+  const { error } = await cliente().from('escalera_puestos').upsert(
     jugadorIds.map((jugadorId, i) => ({
       competicion_id: competicionId,
       jugador_id: jugadorId,
@@ -313,7 +313,7 @@ export async function sembrarEscalera(competicionId: string, jugadorIds: string[
 }
 
 export async function crearReto(competicionId: string, retadoId: string): Promise<Reto> {
-  const { data, error } = await supabase.rpc('crear_reto', {
+  const { data, error } = await cliente().rpc('crear_reto', {
     p_competicion: competicionId,
     p_retado: retadoId,
   });
@@ -322,12 +322,12 @@ export async function crearReto(competicionId: string, retadoId: string): Promis
 }
 
 export async function responderReto(retoId: string, estado: Reto['estado']) {
-  const { error } = await supabase.from('retos').update({ estado }).eq('id', retoId);
+  const { error } = await cliente().from('retos').update({ estado }).eq('id', retoId);
   revienta(error);
 }
 
 export async function abrirPartidoDeReto(retoId: string): Promise<Partido> {
-  const { data, error } = await supabase.rpc('partido_de_reto', { p_reto: retoId });
+  const { data, error } = await cliente().rpc('partido_de_reto', { p_reto: retoId });
   revienta(error);
   return aPartido(data);
 }
@@ -365,7 +365,7 @@ export async function generarJornadaDivision(
   );
   if (partidos.length === 0) return { creados: 0, descansan };
 
-  const jornada = await supabase
+  const jornada = await cliente()
     .from('jornadas')
     .insert({
       competicion_id: competicionId,
@@ -388,7 +388,7 @@ export async function generarJornadaDivision(
     equipo_b: p.equipoB,
   }));
 
-  const { error } = await supabase.from('partidos').insert(filas);
+  const { error } = await cliente().from('partidos').insert(filas);
   revienta(error);
   return { creados: filas.length, descansan };
 }
@@ -403,7 +403,7 @@ export async function generarLigaIndividual(
   let total = 0;
 
   for (const [i, partidos] of jornadas.entries()) {
-    const jornada = await supabase
+    const jornada = await cliente()
       .from('jornadas')
       .insert({ competicion_id: competicionId, division_id: divisionId, numero: i + 1 })
       .select()
@@ -420,7 +420,7 @@ export async function generarLigaIndividual(
       equipo_a: p.equipoA,
       equipo_b: p.equipoB,
     }));
-    const { error } = await supabase.from('partidos').insert(filas);
+    const { error } = await cliente().from('partidos').insert(filas);
     revienta(error);
     total += filas.length;
   }
@@ -464,7 +464,7 @@ export async function generarTorneoParejas(
   }
 
   if (filas.length === 0) return 0;
-  const { error } = await supabase.from('partidos').insert(filas);
+  const { error } = await cliente().from('partidos').insert(filas);
   revienta(error);
   return filas.length;
 }

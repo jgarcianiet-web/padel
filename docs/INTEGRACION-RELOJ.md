@@ -1,9 +1,54 @@
-# Integración con Rising Padel Watch (deep link)
+# Integración con Rising Padel Watch
 
-Liga Personal Pádel no tiene servidor: ambas apps viven en el mismo iPhone, así
-que el volcado de sesiones se hace **en el dispositivo** con un deep link, sin
-red ni tokens. Es el "adaptador" que contempla el `docs/api-contract.md` de
-`rising-padel-watch`.
+Liga Personal Pádel no tiene servidor: el volcado de sesiones se hace **en el
+dispositivo**, sin red ni tokens. Hay dos vías, ambas con el MISMO JSON del
+contrato (`docs/api-contract.md` de `rising-padel-watch`, el cuerpo del
+`POST /v1/padel-sessions`):
+
+1. **Reloj embebido (la vía principal).** La app del Apple Watch vive dentro de
+   esta app (`targets/watch/`) y entrega cada sesión por WatchConnectivity al
+   módulo local `modules/watch-sync`. No hay que abrir nada: la sesión llega
+   sola, queda guardada en nativo aunque la app esté cerrada, y el Panel avisa
+   con un banner que lleva a la pantalla "Sesiones del reloj" (`/reloj`).
+2. **Deep link (respaldo).** La antigua app compañera `RisingPadel` puede
+   seguir volcando con `ligapadel://importar?datos=...`. Se mantiene por las
+   instalaciones que aún la usen y como vía de prueba manual.
+
+## Reloj embebido: cómo encaja
+
+```
+Apple Watch (targets/watch, detección + PadelCore)
+        │ transferUserInfo: { padel_session_id, padel_session_contract }
+        ▼
+modules/watch-sync (WCSessionDelegate nativo, cola en UserDefaults)
+        │ getPendientes() / evento onSesionReloj
+        ▼
+src/lib/sesionesReloj.ts → parseSesion() → pantalla /reloj → formulario + Partido
+```
+
+- El reloj construye el JSON del contrato **en la muñeca** (`PhoneTransport`,
+  clave `padel_session_contract`): el módulo receptor no necesita el modelo de
+  dominio, solo reenviar la cadena. Sin eventos golpe a golpe, igual que el
+  deep link: la liga usa agregados.
+- La cola pendiente vive en `UserDefaults` del lado nativo porque
+  `transferUserInfo` puede despertar la app en segundo plano sin que React
+  Native llegue a cargar. JS la lee al abrir, al volver a primer plano y al
+  recibir el evento.
+- La idempotencia es por `sessionId`: una sesión consumida (importada o
+  descartada) se recuerda y un reenvío del reloj no la resucita.
+- El código del reloj (`targets/watch/`, incluido `PadelCore/`) viene de
+  `rising-padel-watch/ios`; los tests del algoritmo siguen viviendo allí. Si
+  se toca el core, tocarlo en los dos sitios.
+
+## Compilar con el reloj
+
+El target lo genera `@bacons/apple-targets` en `expo prebuild`. Hace falta
+`APPLE_TEAM_ID` en el entorno (va a `ios.appleTeamId`) y, en EAS, credenciales
+para el bundle `com.jesus.ligapadel.watchkitapp` además del principal — el
+plugin declara el target extra en `extra.eas.build.experimental.ios.appExtensions`
+y `eas credentials` se encarga del perfil al configurarlo una vez.
+
+# Deep link (respaldo)
 
 ## Qué debe hacer la app del reloj (lado iOS/compañera)
 

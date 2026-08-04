@@ -17,6 +17,9 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.jesus.ligapadel',
+    // Team ID de Apple: necesario para firmar la app del reloj embebida
+    // (targets/watch). En EAS se inyecta como variable de entorno.
+    appleTeamId: process.env.APPLE_TEAM_ID,
     infoPlist: {
       NSCameraUsageDescription:
         'La app usa la cámara para fotografiar la pantalla de resultados de Padel Band y rellenar tus golpes automáticamente.',
@@ -42,6 +45,8 @@ const config: ExpoConfig = {
     favicon: './assets/images/favicon.png',
   },
   plugins: [
+    // Embebe la app de Apple Watch (targets/watch) en el proyecto iOS generado.
+    '@bacons/apple-targets',
     'expo-router',
     [
       'expo-splash-screen',

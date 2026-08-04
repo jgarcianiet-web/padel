@@ -7,16 +7,19 @@ import { capturaVacia, mediaGolpes } from '../lib/band';
 import { T } from '../theme/colors';
 import { FONT } from '../theme/typography';
 import { S } from '../theme/styles';
-import { CapturaBand, GolpeSesion } from '../types/domain';
+import { CapturaBand, GolpeSesion, GolpeVolumen } from '../types/domain';
 
 interface Props {
   golpesSesion: GolpeSesion[];
   bandInicio: string;
   bandFin: string;
   bandMediaJugador: string;
+  golpesVolumen: GolpeVolumen[];
+  totalGolpes: number | null;
   onResultado: (captura: CapturaBand) => void;
   onDescartarGolpes: () => void;
   onDescartarCurva: () => void;
+  onDescartarVolumen: () => void;
 }
 
 // Captura de Padel Band: foto o imagen de la galería → visión → autorrelleno.
@@ -27,9 +30,12 @@ export default function BandCapture({
   bandInicio,
   bandFin,
   bandMediaJugador,
+  golpesVolumen,
+  totalGolpes,
   onResultado,
   onDescartarGolpes,
   onDescartarCurva,
+  onDescartarVolumen,
 }: Props) {
   const [capturando, setCapturando] = useState(false);
   const [error, setError] = useState('');
@@ -108,9 +114,9 @@ export default function BandCapture({
         )}
       </View>
       <Text style={styles.ayuda}>
-        Sube la pantalla de golpes (rellena el nivel de la sesión con la media, tu mejor y peor
-        golpe y el desglose) y/o la pantalla "Progreso de la sesión" (rellena la curva
-        inicio/fin y tu media histórica). En cualquier orden.
+        Sube cualquiera de las tres pantallas de Padel Band, en cualquier orden: golpes (rellena
+        el nivel de la sesión con la media, tu mejor y peor golpe y el desglose), "Progreso de la
+        sesión" (curva inicio/fin y tu media histórica) y volumen de golpeo (recuento de golpes).
       </Text>
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -149,6 +155,28 @@ export default function BandCapture({
           </Text>
           <Pressable onPress={onDescartarCurva}>
             <Text style={styles.descartar}>Descartar captura de progreso</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {(golpesVolumen.length > 0 || totalGolpes != null) && (
+        <View style={styles.resumen}>
+          <Text style={[S.labelSmall, { color: T.pista, marginBottom: 6 }]}>
+            ✓ Volumen de golpeo{totalGolpes != null ? ` · ${totalGolpes} golpes` : ''}
+          </Text>
+          {golpesVolumen.length > 0 && (
+            <View style={styles.chips}>
+              {golpesVolumen.map((g, i) => (
+                <View key={i} style={styles.chip}>
+                  <Text style={styles.chipTexto}>
+                    {g.nombre} <Text style={styles.chipNota}>×{g.cantidad}</Text>
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+          <Pressable onPress={onDescartarVolumen}>
+            <Text style={styles.descartar}>Descartar captura de volumen</Text>
           </Pressable>
         </View>
       )}

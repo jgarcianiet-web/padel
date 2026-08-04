@@ -74,7 +74,9 @@ export default function HistorialScreen() {
                   <View style={[styles.badge, { backgroundColor: colorBadge }]}>
                     <Text style={styles.badgeLetra}>{letra}</Text>
                   </View>
-                  <View style={styles.cuerpo}>
+                  <Pressable
+                    style={styles.cuerpo}
+                    onPress={() => router.push(`/detalle?id=${m.id}`)}>
                     <View style={styles.filaTitulo}>
                       <Text style={styles.titulo} numberOfLines={1}>
                         {fmtFecha(m.fecha)}
@@ -127,11 +129,12 @@ export default function HistorialScreen() {
                           ? `👎 ${m.peorGolpe}${m.peorPunt ? ` ${m.peorPunt}/7` : ''}`
                           : ''}
                         {m.golpesSesion ? ` · 📷 ${m.golpesSesion.length} golpes de la Band` : ''}
+                        {m.totalGolpes != null ? ` · 🔢 ${m.totalGolpes} golpeos` : ''}
                       </Text>
                     )}
                     {m.salud ? <Text style={styles.detalle}>{fmtSalud(m.salud)}</Text> : null}
                     {m.nota ? <Text style={styles.nota}>{m.nota}</Text> : null}
-                  </View>
+                  </Pressable>
                 </Card>
               );
             })}

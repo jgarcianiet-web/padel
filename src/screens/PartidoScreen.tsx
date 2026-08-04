@@ -23,6 +23,7 @@ import ObjectivesChecklist from '../components/ObjectivesChecklist';
 import Toggle from '../components/Toggle';
 import { aplicarCaptura } from '../lib/band';
 import { fmtFecha, hoy } from '../lib/date';
+import { recogerSesionPendiente } from '../lib/importSesion';
 import {
   calcularResultado,
   formatearSets,
@@ -39,6 +40,7 @@ import { S } from '../theme/styles';
 import {
   CapturaBand,
   GolpeSesion,
+  GolpeVolumen,
   Match,
   Posicion,
   ResultadoPartido,
@@ -75,6 +77,8 @@ export default function PartidoScreen() {
   const [bandInicio, setBandInicio] = useState('');
   const [bandFin, setBandFin] = useState('');
   const [bandMediaJugador, setBandMediaJugador] = useState('');
+  const [golpesVolumen, setGolpesVolumen] = useState<GolpeVolumen[]>([]);
+  const [totalGolpes, setTotalGolpes] = useState<number | null>(null);
   const [objsCumplidos, setObjsCumplidos] = useState([false, false, false]);
   const [nota, setNota] = useState('');
   const [salud, setSalud] = useState<SaludPartido | null>(null);
@@ -99,6 +103,8 @@ export default function PartidoScreen() {
     setBandInicio('');
     setBandFin('');
     setBandMediaJugador('');
+    setGolpesVolumen([]);
+    setTotalGolpes(null);
     setObjsCumplidos([false, false, false]);
     setNota('');
     setSalud(null);
@@ -139,11 +145,37 @@ export default function PartidoScreen() {
     setBandMediaJugador(
       editando.bandMediaJugador != null ? String(editando.bandMediaJugador) : ''
     );
+    setGolpesVolumen(editando.golpesVolumen ?? []);
+    setTotalGolpes(editando.totalGolpes ?? null);
     setObjsCumplidos([...editando.objetivos]);
     setNota(editando.nota || '');
     setSalud(editando.salud ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editando?.id]);
+
+  // sesión llegada por deep link desde Rising Padel Watch (/importar)
+  useEffect(() => {
+    if (editando) return;
+    const s = recogerSesionPendiente();
+    if (!s) return;
+    limpiarFormulario();
+    setFecha(s.fecha);
+    setTipo(s.tipo);
+    if (s.resultado) setResultado(s.resultado);
+    if (s.marcador) {
+      const mc = marcadorVacio();
+      s.marcador.forEach((set, i) => {
+        if (i < 3) mc[i] = { ...set };
+      });
+      setMarcador(mc);
+    }
+    setNivelBand(s.nivelBand);
+    setGolpesSesion(s.golpesSesion);
+    setGolpesVolumen(s.golpesVolumen);
+    setTotalGolpes(s.totalGolpes);
+    setSalud(s.salud);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const resultadoCalc = calcularResultado(marcador);
   const clubesPrevios = calcClubesPrevios(matches);
@@ -163,6 +195,13 @@ export default function PartidoScreen() {
     if (patch.bandInicio !== undefined) setBandInicio(patch.bandInicio);
     if (patch.bandFin !== undefined) setBandFin(patch.bandFin);
     if (patch.bandMediaJugador !== undefined) setBandMediaJugador(patch.bandMediaJugador);
+    if (patch.golpesVolumen !== undefined) setGolpesVolumen(patch.golpesVolumen);
+    if (patch.totalGolpes !== undefined) setTotalGolpes(patch.totalGolpes);
+  };
+
+  const descartarVolumen = () => {
+    setGolpesVolumen([]);
+    setTotalGolpes(null);
   };
 
   const descartarCurva = () => {
@@ -205,6 +244,8 @@ export default function PartidoScreen() {
       bandInicio: bandInicio ? parseFloat(bandInicio) : null,
       bandFin: bandFin ? parseFloat(bandFin) : null,
       bandMediaJugador: bandMediaJugador ? parseFloat(bandMediaJugador) : null,
+      golpesVolumen: golpesVolumen.length > 0 ? golpesVolumen : null,
+      totalGolpes,
       salud,
     };
     await guardarPartido(m);
@@ -358,9 +399,12 @@ export default function PartidoScreen() {
               bandInicio={bandInicio}
               bandFin={bandFin}
               bandMediaJugador={bandMediaJugador}
+              golpesVolumen={golpesVolumen}
+              totalGolpes={totalGolpes}
               onResultado={onCaptura}
               onDescartarGolpes={() => setGolpesSesion([])}
               onDescartarCurva={descartarCurva}
+              onDescartarVolumen={descartarVolumen}
             />
             <GolpeSelector
               titulo="Mejor golpe"

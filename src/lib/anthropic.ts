@@ -110,6 +110,13 @@ export async function analizarLiga(state: LigaState): Promise<Analisis> {
             mediaHistoricaJugador: m.bandMediaJugador ?? null,
           }
         : null,
+    volumenGolpeoSesion:
+      m.golpesVolumen || m.totalGolpes != null
+        ? {
+            totalGolpes: m.totalGolpes ?? null,
+            porGolpe: m.golpesVolumen ?? null,
+          }
+        : null,
     salud: m.salud
       ? {
           duracionMin: m.salud.duracionMin,
@@ -141,6 +148,7 @@ SEMÁNTICA DE LOS DATOS:
 - mejorGolpe/peorGolpe van puntuados de 1 (peor) a 7 (mejor).
 - golpesSesionPadelBand: cuando existe, es el desglose completo de la sesión capturado de la app Padel Band (todos los golpes con su nota 1-7). Es el dato más rico: úsalo para analizar la evolución de cada golpe entre sesiones.
 - curvaSesionPadelBand: cuando existe, es la curva de progreso DENTRO de esa sesión (nivel al inicio, nivel al final y media histórica del jugador). Un fin muy por debajo del inicio sugiere fatiga o desconexión al final de la sesión; compara también inicio/fin con la media histórica.
+- volumenGolpeoSesion: cuando existe, es el recuento de golpes de la sesión (total y desglose por tipo de golpe). Úsalo para analizar el estilo y la carga: qué golpes domina en frecuencia, si abusa o infrautiliza alguno respecto a su calidad (mucho volumen con nota baja = urgencia de corregir; poco volumen con nota alta = arma desaprovechada), y si el volumen alto se asocia a caídas de nivel al final de la sesión o a derrotas.
 - salud: cuando existe, son los datos del Apple Watch del partido (duración en minutos, pulso medio y máximo, calorías). Correlaciona el esfuerzo físico con los resultados y la calidad de golpeo: ¿rinde peor en partidos largos o de pulso alto?, ¿su nivel Band cae cuando el esfuerzo se dispara?
 - posicion: lado en que jugó (reves o derecha).
 
@@ -148,6 +156,8 @@ REGISTRO (orden cronológico):
 ${JSON.stringify(datos, null, 2)}
 
 Antes de responder, calcula mentalmente: % de cumplimiento de cada objetivo, rendimiento por posición (victorias y bien jugados en revés vs derecha), rendimiento competitivo vs amistoso, rendimiento con cada compañero si hay datos, ritmo hacia la meta de nivel si está definida, evolución del Playtomic desde el inicial, media del Band por sesión y su tendencia, golpes que más se repiten como peor golpe y su puntuación media, y patrones en los sets (¿pierde terceros sets?, ¿arranca frío el primero?).
+
+ANÁLISIS FÍSICO (dale peso cuando haya datos de salud): calcula también el pulso medio en victorias vs derrotas, el nivel Band en partidos de pulso alto vs bajo (usa la mediana de sus pulsos como corte), el rendimiento en partidos largos (por encima de su duración media) vs cortos, y la fatiga dentro de la sesión (curva de la Band que acaba por debajo de su inicio, sobre todo si coincide con pulso o duración altos, o con volumen de golpeo alto). Si 3 o más partidos tienen datos de salud, uno de los "patrones" debe ser físico con sus números (ej: 'En tus 3 partidos con pulso medio >140 tu Band cae a 3,1 frente a 3,8 cuando vas más bajo'), y si detectas un patrón físico claro, al menos una acción del "plan" debe atacarlo (gestión de esfuerzo, ritmo de puntos, físico específico de pádel). Si hay menos de 3 partidos con salud, dilo y no fuerces conclusiones físicas.
 
 Responde SOLO con un objeto JSON válido, sin Markdown ni texto fuera del JSON, con esta estructura exacta:
 {
@@ -192,15 +202,17 @@ export async function procesarCapturaBand(
   base64: string,
   mediaType: string
 ): Promise<CapturaBand> {
-  const promptVision = `Esta es una captura de pantalla de la app Padel Band de una sesión de pádel. Puede ser una de estas dos pantallas:
+  const promptVision = `Esta es una captura de pantalla de la app Padel Band de una sesión de pádel. Puede ser una de estas tres pantallas:
 
-A) PANTALLA DE GOLPES: lista de golpes con su puntuación (escala 1 a 7, puede haber decimales). Puede incluir también una puntuación o nivel global de la sesión.
+A) PANTALLA DE GOLPES (calidad): lista de golpes con su puntuación (escala 1 a 7, puede haber decimales). Puede incluir también una puntuación o nivel global de la sesión.
 
 B) PANTALLA "PROGRESO DE LA SESIÓN": una curva/gráfica de evolución del nivel a lo largo de la sesión, con un valor al inicio de la curva, un valor al final, y normalmente una línea horizontal que marca la media histórica del jugador.
 
-Identifica primero cuál de las dos es y responde SOLO con un objeto JSON válido, sin Markdown ni texto fuera del JSON.
+C) PANTALLA DE VOLUMEN DE GOLPEO: recuento de CUÁNTOS golpes de cada tipo se han dado en la sesión (números enteros, a veces con porcentajes o un total de golpes de la sesión). Se distingue de la A porque son cantidades/conteos, no puntuaciones de calidad 1-7.
 
-Si es la pantalla de golpes, extrae TODOS los golpes visibles con su puntuación:
+Identifica primero cuál es y responde SOLO con un objeto JSON válido, sin Markdown ni texto fuera del JSON.
+
+Si es la pantalla de golpes (calidad), extrae TODOS los golpes visibles con su puntuación:
 {
   "tipo": "golpes",
   "nivelSesion": número o null si no aparece,
@@ -213,6 +225,13 @@ Si es la pantalla de progreso de la sesión:
   "inicio": número al inicio de la curva o null si no es legible,
   "fin": número al final de la curva o null,
   "mediaJugador": número de la línea horizontal de media del jugador o null
+}
+
+Si es la pantalla de volumen de golpeo, extrae TODOS los tipos de golpe visibles con su cantidad:
+{
+  "tipo": "volumen",
+  "total": número total de golpes de la sesión o null si no aparece,
+  "golpes": [{"nombre": "nombre del golpe en español tal como aparece", "cantidad": número entero}]
 }
 
 Si la imagen no parece una captura de Padel Band o no hay datos legibles, responde: {"tipo": "desconocido"}`;

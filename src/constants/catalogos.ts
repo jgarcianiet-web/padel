@@ -29,11 +29,12 @@ export const CATALOGO_OBJETIVOS = [
   'Calentar 10 min y acabar sin molestias físicas',
 ];
 
+// Volea y Globo unificados: Padel Band los separa por lado (derecha/revés)
+// pero aquí se agrupan (ver golpeCanonico en lib/band.ts).
 export const GOLPES = [
   'Derecha',
   'Revés',
-  'Volea de derecha',
-  'Volea de revés',
+  'Volea',
   'Bandeja',
   'Víbora',
   'Remate',

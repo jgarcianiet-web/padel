@@ -1,7 +1,10 @@
 import { mkMatch } from './fixtures';
 import {
+  bandDeSesion,
   bienJugado,
   calcBandMedia,
+  calcCumplimientoObjetivos,
+  calcResumenMensual,
   calcChartData,
   calcClubesPrevios,
   calcCompanerosPrevios,
@@ -18,6 +21,7 @@ import {
   calcStatsTipo,
   calcTopMejores,
   calcTopPeores,
+  calcEvolucionGolpe,
   calcUltimos8,
   upsertMatch,
 } from './metrics';
@@ -103,6 +107,29 @@ describe('niveles', () => {
     expect(calcBandMedia(ms, perfil())).toBe(3.5);
     expect(calcBandMedia([], perfil())).toBe(3.5);
     expect(calcBandMedia([], perfil({ nivelBand: '' }))).toBeNull();
+  });
+
+  test('bandDeSesion deriva de la curva cuando falta el nivel de sesión', () => {
+    expect(bandDeSesion(mkMatch({ nivelBand: 4.2 }))).toBe(4.2);
+    expect(bandDeSesion(mkMatch({ nivelBand: null, bandInicio: 3.0, bandFin: 4.0 }))).toBe(3.5);
+    expect(bandDeSesion(mkMatch({ nivelBand: null, bandInicio: 3.2 }))).toBe(3.2);
+    expect(bandDeSesion(mkMatch({ nivelBand: null }))).toBeNull();
+  });
+
+  test('bandMedia usa todos los puntos de la gráfica, no el perfil, si hay datos', () => {
+    // partidos solo con curva de progreso (sin nivelBand): antes caía al 3.5 del perfil
+    const ms = [
+      mkMatch({ nivelBand: null, bandInicio: 2.0, bandFin: 3.0 }), // punto 2.5
+      mkMatch({ nivelBand: 4.5 }),
+      mkMatch({ nivelBand: null }), // sin dato: no cuenta
+    ];
+    // (2.5 + 4.5) / 2 = 3.5, ignorando el valor del perfil
+    expect(calcBandMedia(ms, perfil({ nivelBand: '9.9' }))).toBe(3.5);
+  });
+
+  test('chartData incluye puntos Band derivados de la curva', () => {
+    const ms = [mkMatch({ fecha: '2026-07-03', nivel: null, nivelBand: null, bandInicio: 3, bandFin: 4 })];
+    expect(calcChartData(ms)).toEqual([{ fecha: '3 jul', nivel: null, band: 3.5 }]);
   });
 
   test('progresoMeta clamped y null si meta <= inicial', () => {
@@ -202,6 +229,95 @@ describe('chart, forma e historial', () => {
     const meses = calcMeses(ms);
     expect(meses.map((g) => g.clave)).toEqual(['Julio de 2026', 'Junio de 2026']);
     expect(meses[0].items.map((m) => m.fecha)).toEqual(['2026-07-12', '2026-07-01']);
+  });
+
+  test('calcEvolucionGolpe recorre las sesiones capturadas con volumen', () => {
+    const ms = [
+      mkMatch({
+        fecha: '2026-07-01',
+        golpesSesion: [{ nombre: 'Bandeja', nota: 3.0 }],
+        golpesVolumen: [{ nombre: 'Bandeja', cantidad: 30 }],
+      }),
+      mkMatch({ fecha: '2026-07-05', golpesSesion: [{ nombre: 'Saque', nota: 5 }] }),
+      mkMatch({ fecha: '2026-07-10', golpesSesion: [{ nombre: 'bandeja', nota: 4.5 }] }),
+      mkMatch({ fecha: '2026-07-12', golpesSesion: null }),
+    ];
+    const evo = calcEvolucionGolpe(ms, 'Bandeja');
+    expect(evo.veces).toBe(2);
+    expect(evo.puntos.map((p) => p.nota)).toEqual([3.0, 4.5]);
+    expect(evo.puntos[0].cantidad).toBe(30);
+    expect(evo.puntos[1].cantidad).toBeNull();
+    expect(evo.media).toBeCloseTo(3.75);
+    expect(evo.mejor).toBe(4.5);
+    expect(evo.peor).toBe(3.0);
+    expect(calcEvolucionGolpe(ms, 'Víbora').veces).toBe(0);
+  });
+
+  test('resumen mensual compara mes en curso y anterior', () => {
+    const ms = [
+      mkMatch({ fecha: '2026-06-20', resultado: 'victoria', objetivos: [true, true, false], nivel: 3.3 }),
+      mkMatch({ fecha: '2026-07-01', resultado: 'derrota', objetivos: [false, false, false], nivel: 3.25 }),
+      mkMatch({ fecha: '2026-07-10', resultado: 'victoria', objetivos: [true, true, true], nivel: 3.4 }),
+    ];
+    const r = calcResumenMensual(ms, '2026-07-14');
+    expect(r.actual).toEqual({
+      clave: 'Julio de 2026',
+      n: 2,
+      pctV: 50,
+      pctBJ: 50,
+      nivelCierre: 3.4,
+    });
+    expect(r.anterior).toEqual({
+      clave: 'Junio de 2026',
+      n: 1,
+      pctV: 100,
+      pctBJ: 100,
+      nivelCierre: 3.3,
+    });
+    // cambio de año: diciembre → enero
+    expect(calcResumenMensual([], '2026-01-05').anterior.clave).toBe('Diciembre de 2025');
+  });
+
+  test('cumplimiento por objetivo sobre todos los partidos', () => {
+    const ms = [
+      mkMatch({ objetivos: [true, false, true] }),
+      mkMatch({ objetivos: [true, false, false] }),
+    ];
+    expect(calcCumplimientoObjetivos(ms)).toEqual([100, 0, 50]);
+    expect(calcCumplimientoObjetivos([])).toEqual([null, null, null]);
+  });
+
+  test('calcEvolucionGolpe unifica variantes de volea/globo de datos antiguos', () => {
+    const ms = [
+      mkMatch({
+        fecha: '2026-07-01',
+        golpesSesion: [
+          { nombre: 'Volea de derecha', nota: 4.0 },
+          { nombre: 'Volea de revés', nota: 2.0 },
+        ],
+        golpesVolumen: [
+          { nombre: 'Volea de derecha', cantidad: 25 },
+          { nombre: 'Volea de revés', cantidad: 15 },
+        ],
+      }),
+      mkMatch({ fecha: '2026-07-08', golpesSesion: [{ nombre: 'Volea', nota: 5.0 }] }),
+    ];
+    const evo = calcEvolucionGolpe(ms, 'Volea');
+    expect(evo.veces).toBe(2);
+    expect(evo.puntos[0].nota).toBe(3.0); // media de las dos variantes
+    expect(evo.puntos[0].cantidad).toBe(40); // suma del volumen
+    expect(evo.puntos[1].nota).toBe(5.0);
+    // buscar por variante también encuentra la ficha unificada
+    expect(calcEvolucionGolpe(ms, 'Volea de revés').veces).toBe(2);
+  });
+
+  test('agregado de golpes unifica mejor/peor guardados con variantes', () => {
+    const ms = [
+      mkMatch({ mejorGolpe: 'Volea de derecha', mejorPunt: 5, peorGolpe: null, peorPunt: null }),
+      mkMatch({ mejorGolpe: 'Volea de revés', mejorPunt: 3, peorGolpe: null, peorPunt: null }),
+    ];
+    const mejores = calcTopMejores(ms);
+    expect(mejores).toEqual([{ golpe: 'Volea', veces: 2, media: 4 }]);
   });
 
   test('upsertMatch inserta ordenado y reemplaza por id', () => {

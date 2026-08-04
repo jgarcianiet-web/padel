@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { T } from '../theme/colors';
 import { FONT } from '../theme/typography';
@@ -24,19 +25,24 @@ export default function StrokesCard({ mejores, peores }: Props) {
       <Text style={[styles.colTitulo, { color }]}>{titulo}</Text>
       {golpes.length === 0 && <Text style={styles.sinDatos}>Sin datos aún</Text>}
       {golpes.map((g) => (
-        <Text key={g.golpe} style={styles.golpe}>
-          <Text style={styles.golpeNombre}>{g.golpe}</Text>
-          <Text style={styles.golpeDetalle}>
-            {' '}· {g.veces}× · media {g.media.toFixed(1)}/7
+        <Pressable
+          key={g.golpe}
+          onPress={() => router.push(`/golpe?nombre=${encodeURIComponent(g.golpe)}`)}>
+          <Text style={styles.golpe}>
+            <Text style={styles.golpeNombre}>{g.golpe}</Text>
+            <Text style={styles.golpeDetalle}>
+              {' '}· {g.veces}× · media {g.media.toFixed(1)}/7 ›
+            </Text>
           </Text>
-        </Text>
+        </Pressable>
       ))}
     </View>
   );
 
   return (
     <View style={S.card}>
-      <Text style={[S.label, { marginBottom: 10 }]}>Tus golpes</Text>
+      <Text style={[S.label, { marginBottom: 4 }]}>Tus golpes</Text>
+      <Text style={styles.ayuda}>Toca un golpe para ver su evolución sesión a sesión</Text>
       <View style={styles.filas}>
         <Columna titulo="ARMAS 👍" color={T.bolaOscura} golpes={mejores} />
         <View style={styles.separador} />
@@ -47,6 +53,7 @@ export default function StrokesCard({ mejores, peores }: Props) {
 }
 
 const styles = StyleSheet.create({
+  ayuda: { fontSize: 11.5, color: T.tintaSuave, marginBottom: 10, fontFamily: FONT.texto },
   filas: { flexDirection: 'row', gap: 14 },
   col: { flex: 1 },
   colTitulo: { fontSize: 11.5, fontFamily: FONT.textoBold, marginBottom: 6 },

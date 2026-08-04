@@ -19,6 +19,12 @@ export interface GolpeSesion {
   nota: number;
 }
 
+// Recuento de golpes por tipo (pantalla de volumen de golpeo de Padel Band)
+export interface GolpeVolumen {
+  nombre: string;
+  cantidad: number;
+}
+
 // Datos de salud del workout de Apple Watch vinculado al partido (fase 2).
 export interface SaludPartido {
   duracionMin: number;
@@ -51,6 +57,9 @@ export interface Match {
   bandInicio?: number | null;
   bandFin?: number | null;
   bandMediaJugador?: number | null;
+  // Volumen de golpeo de la sesión (pantalla de recuento de Padel Band)
+  golpesVolumen?: GolpeVolumen[] | null;
+  totalGolpes?: number | null;
   // Workout de Apple Watch vinculado (opcional, fase 2)
   salud?: SaludPartido | null;
 }
@@ -104,8 +113,8 @@ export interface MesGrupo {
   items: Match[];
 }
 
-// Respuesta de la lectura de captura de Padel Band (visión). Hay dos
-// pantallas: la de golpes de la sesión y la de "Progreso de la sesión".
+// Respuesta de la lectura de captura de Padel Band (visión). Hay tres
+// pantallas: notas de golpes, "Progreso de la sesión" y volumen de golpeo.
 export type CapturaBand =
   | { tipo: 'golpes'; nivelSesion: number | null; golpes: GolpeSesion[] }
   | {
@@ -114,4 +123,5 @@ export type CapturaBand =
       fin: number | null;
       mediaJugador: number | null;
     }
+  | { tipo: 'volumen'; total: number | null; golpes: GolpeVolumen[] }
   | { tipo: 'desconocido' };

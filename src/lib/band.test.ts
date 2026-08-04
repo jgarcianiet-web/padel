@@ -1,4 +1,12 @@
-import { aplicarCaptura, capturaVacia, mediaGolpes, parseCapturaBand } from './band';
+import {
+  aplicarCaptura,
+  capturaVacia,
+  fusionarGolpes,
+  fusionarVolumen,
+  golpeCanonico,
+  mediaGolpes,
+  parseCapturaBand,
+} from './band';
 import { CapturaBand } from '../types/domain';
 
 const capturaGolpes: CapturaBand = {
@@ -67,6 +75,39 @@ describe('aplicarCaptura: pantalla Progreso de la sesión', () => {
   });
 });
 
+const capturaVolumen: CapturaBand = {
+  tipo: 'volumen',
+  total: null,
+  golpes: [
+    { nombre: 'bandeja', cantidad: 45 },
+    { nombre: 'Derecha', cantidad: 120 },
+  ],
+};
+
+describe('aplicarCaptura: pantalla de volumen de golpeo', () => {
+  test('rellena solo golpesVolumen y totalGolpes (suma si no hay total)', () => {
+    const patch = aplicarCaptura(capturaVolumen);
+    expect(patch.golpesVolumen).toEqual([
+      { nombre: 'Bandeja', cantidad: 45 }, // normalizado al catálogo
+      { nombre: 'Derecha', cantidad: 120 },
+    ]);
+    expect(patch.totalGolpes).toBe(165);
+    expect(patch.nivelBand).toBeUndefined();
+    expect(patch.golpesSesion).toBeUndefined();
+    expect(patch.bandInicio).toBeUndefined();
+  });
+
+  test('respeta el total explícito de la pantalla', () => {
+    const patch = aplicarCaptura({ ...capturaVolumen, total: 300 });
+    expect(patch.totalGolpes).toBe(300);
+  });
+
+  test('solo total sin desglose', () => {
+    const patch = aplicarCaptura({ tipo: 'volumen', total: 250, golpes: [] });
+    expect(patch).toEqual({ totalGolpes: 250 });
+  });
+});
+
 describe('independencia del orden', () => {
   test('golpes→progreso y progreso→golpes dan el mismo formulario', () => {
     const base = { nivelBand: '', bandInicio: '', bandFin: '', bandMediaJugador: '' };
@@ -76,6 +117,74 @@ describe('independencia del orden', () => {
     expect(ordenA.nivelBand).toBe('3.9'); // sigue siendo la media de los golpes
     expect(ordenA.bandInicio).toBe('3.2');
   });
+
+  test('las tres capturas dan lo mismo en cualquier orden', () => {
+    const capturas = [capturaGolpes, capturaProgreso, capturaVolumen];
+    const aplicar = (orden: CapturaBand[]) =>
+      orden.reduce((acc, c) => ({ ...acc, ...aplicarCaptura(c) }), {});
+    const referencia = aplicar(capturas);
+    expect(aplicar([capturaVolumen, capturaGolpes, capturaProgreso])).toEqual(referencia);
+    expect(aplicar([capturaProgreso, capturaVolumen, capturaGolpes])).toEqual(referencia);
+  });
+});
+
+describe('unificación de volea y globo por lado', () => {
+  test('golpeCanonico quita el sufijo de lado y casa con el catálogo', () => {
+    expect(golpeCanonico('Volea de derecha')).toBe('Volea');
+    expect(golpeCanonico('volea de revés')).toBe('Volea');
+    expect(golpeCanonico('Globo de reves')).toBe('Globo');
+    expect(golpeCanonico('GLOBO DE DERECHA')).toBe('Globo');
+    expect(golpeCanonico('Bandeja')).toBe('Bandeja');
+    expect(golpeCanonico('revés')).toBe('Revés');
+    expect(golpeCanonico('Golpe raro')).toBe('Golpe raro'); // sin match: se respeta
+  });
+
+  test('fusionarGolpes une variantes con la media de sus notas', () => {
+    const fusion = fusionarGolpes([
+      { nombre: 'Volea de derecha', nota: 4.0 },
+      { nombre: 'Bandeja', nota: 3.0 },
+      { nombre: 'Volea de revés', nota: 2.5 },
+      { nombre: 'Globo de derecha', nota: 5.0 },
+    ]);
+    expect(fusion).toEqual([
+      { nombre: 'Volea', nota: 3.3 }, // (4.0+2.5)/2 = 3.25 → 3.3
+      { nombre: 'Bandeja', nota: 3.0 },
+      { nombre: 'Globo', nota: 5.0 },
+    ]);
+  });
+
+  test('fusionarVolumen une variantes sumando cantidades', () => {
+    expect(
+      fusionarVolumen([
+        { nombre: 'Volea de derecha', cantidad: 30 },
+        { nombre: 'Volea de revés', cantidad: 20 },
+        { nombre: 'Remate', cantidad: 5 },
+      ])
+    ).toEqual([
+      { nombre: 'Volea', cantidad: 50 },
+      { nombre: 'Remate', cantidad: 5 },
+    ]);
+  });
+
+  test('aplicarCaptura de golpes unifica antes de elegir mejor/peor y media', () => {
+    const patch = aplicarCaptura({
+      tipo: 'golpes',
+      nivelSesion: null,
+      golpes: [
+        { nombre: 'Volea de derecha', nota: 6.0 },
+        { nombre: 'Volea de revés', nota: 2.0 },
+        { nombre: 'Saque', nota: 3.0 },
+      ],
+    });
+    // Volea fusionada = 4.0 → mejor Volea (4.0), peor Saque (3.0)
+    expect(patch.golpesSesion).toEqual([
+      { nombre: 'Volea', nota: 4.0 },
+      { nombre: 'Saque', nota: 3.0 },
+    ]);
+    expect(patch.mejorGolpe).toBe('Volea');
+    expect(patch.peorGolpe).toBe('Saque');
+    expect(patch.nivelBand).toBe('3.5'); // media de la lista fusionada
+  });
 });
 
 describe('capturaVacia', () => {
@@ -83,8 +192,10 @@ describe('capturaVacia', () => {
     expect(capturaVacia({ tipo: 'desconocido' })).toBe(true);
     expect(capturaVacia({ tipo: 'golpes', nivelSesion: null, golpes: [] })).toBe(true);
     expect(capturaVacia({ tipo: 'progreso', inicio: null, fin: null, mediaJugador: null })).toBe(true);
+    expect(capturaVacia({ tipo: 'volumen', total: null, golpes: [] })).toBe(true);
     expect(capturaVacia(capturaGolpes)).toBe(false);
     expect(capturaVacia(capturaProgreso)).toBe(false);
+    expect(capturaVacia(capturaVolumen)).toBe(false);
   });
 });
 
@@ -108,6 +219,13 @@ describe('parseCapturaBand', () => {
   test('retro-compatible con respuestas sin tipo (formato web-app)', () => {
     const c = parseCapturaBand('{"nivelSesion":null,"golpes":[{"nombre":"Saque","nota":5}]}');
     expect(c.tipo).toBe('golpes');
+  });
+
+  test('parsea respuesta de volumen', () => {
+    const c = parseCapturaBand(
+      '{"tipo":"volumen","total":300,"golpes":[{"nombre":"Remate","cantidad":12}]}'
+    );
+    expect(c).toEqual({ tipo: 'volumen', total: 300, golpes: [{ nombre: 'Remate', cantidad: 12 }] });
   });
 
   test('descarta golpes malformados y tipos desconocidos', () => {

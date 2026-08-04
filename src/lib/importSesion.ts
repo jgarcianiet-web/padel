@@ -54,13 +54,18 @@ export interface SesionImportada {
   resumen: string; // línea legible para la pantalla de confirmación
 }
 
-// Tipos de golpeo del reloj → catálogo de la liga (volea unificada; el
-// overhead del reloj agrupa bandeja/smash → Bandeja).
+// Tipos de golpeo del reloj → catálogo de la liga (volea unificada). Desde la
+// build 9 el reloj separa los golpes altos en bandeja, víbora y smash; el
+// 'overhead' se mantiene por las sesiones de builds anteriores, que lo
+// agrupaban todo.
 const TIPO_GOLPE: Record<string, string> = {
   forehand: 'Derecha',
   backhand: 'Revés',
   forehandVolley: 'Volea',
   backhandVolley: 'Volea',
+  bandeja: 'Bandeja',
+  vibora: 'Víbora',
+  smash: 'Remate',
   overhead: 'Bandeja',
   serve: 'Saque',
 };

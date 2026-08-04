@@ -112,3 +112,35 @@ describe('parseSesion (contrato Rising Padel Watch)', () => {
     );
   });
 });
+
+describe('golpes altos separados (reloj build 9+)', () => {
+  test('bandeja, víbora y smash mapean a su golpe del catálogo', () => {
+    const s = parseSesion(
+      JSON.stringify({
+        startedAt: '2026-08-04T10:00:00Z',
+        shots: { total: 30, byType: { bandeja: 12, vibora: 8, smash: 10 } },
+        level: { overall: 4.2, byShotType: { bandeja: 4.1, vibora: 4.8, smash: 5.2 }, reliable: true },
+      })
+    );
+    expect(s.golpesVolumen).toEqual([
+      { nombre: 'Bandeja', cantidad: 12 },
+      { nombre: 'Víbora', cantidad: 8 },
+      { nombre: 'Remate', cantidad: 10 },
+    ]);
+    expect(s.golpesSesion).toEqual([
+      { nombre: 'Bandeja', nota: 4.1 },
+      { nombre: 'Víbora', nota: 4.8 },
+      { nombre: 'Remate', nota: 5.2 },
+    ]);
+  });
+
+  test('el overhead de sesiones antiguas sigue entrando como Bandeja', () => {
+    const s = parseSesion(
+      JSON.stringify({
+        startedAt: '2026-08-04T10:00:00Z',
+        shots: { total: 10, byType: { overhead: 10 } },
+      })
+    );
+    expect(s.golpesVolumen).toEqual([{ nombre: 'Bandeja', cantidad: 10 }]);
+  });
+});

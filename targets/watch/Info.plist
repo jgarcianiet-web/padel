@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- WKCompanionAppBundleIdentifier no va aquí: lo inyecta @bacons/apple-targets
+	     como build setting apuntando al bundle id de la app principal. -->
+	<key>WKApplication</key>
+	<true/>
+	<key>WKRunsIndependentlyOfCompanionApp</key>
+	<true/>
+	<!-- HealthKit exige justificar el acceso en el propio Info.plist; sin estas dos
+	     cadenas la app del reloj ni siquiera puede pedir permiso. -->
+	<key>NSHealthShareUsageDescription</key>
+	<string>Rising Padel lee tu frecuencia cardiaca y las calorías del entrenamiento para mostrarte el esfuerzo de cada partido. Solo se comparten con tu liga si tú lo activas en los ajustes.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Rising Padel guarda el partido como entrenamiento en Salud para que cuente en tus anillos de actividad.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Rising Padel usa el acelerómetro y el giróscopo de la muñeca para contar tus golpeos. Estos datos no salen del reloj.</string>
+</dict>
+</plist>

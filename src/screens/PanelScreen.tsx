@@ -10,6 +10,7 @@ import EvolutionChart from '../components/EvolutionChart';
 import GoalProgressBar from '../components/GoalProgressBar';
 import MonthSummaryCard from '../components/MonthSummaryCard';
 import PitchHero from '../components/PitchHero';
+import SesionesRelojBanner from '../components/SesionesRelojBanner';
 import StatMarker from '../components/StatMarker';
 import StrokesCard from '../components/StrokesCard';
 import { AnthropicError, analizarLiga } from '../lib/anthropic';
@@ -100,6 +101,7 @@ export default function PanelScreen() {
     <View style={styles.pantalla}>
       <Cabecera fechaInicio={perfil.fechaInicio} totalPartidos={matches.length} />
       <ScrollView contentContainerStyle={styles.scroll}>
+        <SesionesRelojBanner />
         <PitchHero
           racha={racha}
           mejorRacha={mejorRacha}

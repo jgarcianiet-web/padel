@@ -23,6 +23,7 @@ import ObjectivesChecklist from '../components/ObjectivesChecklist';
 import Toggle from '../components/Toggle';
 import { aplicarCaptura } from '../lib/band';
 import { fmtFecha, hoy } from '../lib/date';
+import { recogerSesionPendiente } from '../lib/importSesion';
 import {
   calcularResultado,
   formatearSets,
@@ -151,6 +152,30 @@ export default function PartidoScreen() {
     setSalud(editando.salud ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editando?.id]);
+
+  // sesión llegada por deep link desde Rising Padel Watch (/importar)
+  useEffect(() => {
+    if (editando) return;
+    const s = recogerSesionPendiente();
+    if (!s) return;
+    limpiarFormulario();
+    setFecha(s.fecha);
+    setTipo(s.tipo);
+    if (s.resultado) setResultado(s.resultado);
+    if (s.marcador) {
+      const mc = marcadorVacio();
+      s.marcador.forEach((set, i) => {
+        if (i < 3) mc[i] = { ...set };
+      });
+      setMarcador(mc);
+    }
+    setNivelBand(s.nivelBand);
+    setGolpesSesion(s.golpesSesion);
+    setGolpesVolumen(s.golpesVolumen);
+    setTotalGolpes(s.totalGolpes);
+    setSalud(s.salud);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const resultadoCalc = calcularResultado(marcador);
   const clubesPrevios = calcClubesPrevios(matches);
